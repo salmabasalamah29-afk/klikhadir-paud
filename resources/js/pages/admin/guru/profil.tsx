@@ -1,5 +1,5 @@
 import { Head, Link } from '@inertiajs/react';
-import { ArrowLeft, BookOpen, Users, UserRound } from 'lucide-react';
+import { ArrowLeft, Users, UserRound } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,11 +19,6 @@ interface Guru {
     kelas?: {
         id: number;
         full_nama_kelas: string;
-    }[];
-    mataPelajarans?: {
-        id: number;
-        nama_mapel: string;
-        kategori: string;
     }[];
 }
 
@@ -103,7 +98,7 @@ export default function GuruProfil({ guru }: { guru: Guru }) {
                                 <BookOpen className="h-4 w-4 text-primary" />
                                 Penempatan
                             </CardTitle>
-                            <CardDescription>Kelas dan mata pelajaran yang diampu.</CardDescription>
+                            <CardDescription>Kelas yang diampu.</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-3 text-sm">
                             <div>
@@ -119,22 +114,6 @@ export default function GuruProfil({ guru }: { guru: Guru }) {
                                         ))
                                     ) : (
                                         <span className="text-xs text-muted-foreground italic">Tidak ada kelas</span>
-                                    )}
-                                </div>
-                            </div>
-                            <div>
-                                <p className="mb-2 flex items-center gap-1 text-xs text-muted-foreground">
-                                    <BookOpen className="h-3.5 w-3.5" /> Mata Pelajaran
-                                </p>
-                                <div className="flex flex-wrap gap-1">
-                                    {guru.mataPelajarans && guru.mataPelajarans.length > 0 ? (
-                                        guru.mataPelajarans.map((m) => (
-                                            <span key={m.id} className="inline-flex items-center rounded-md bg-blue-500/10 px-2 py-0.5 text-[10px] font-medium text-blue-600 ring-1 ring-inset ring-blue-500/20 dark:text-blue-400">
-                                                {m.nama_mapel} ({m.kategori})
-                                            </span>
-                                        ))
-                                    ) : (
-                                        <span className="text-xs text-muted-foreground italic">Tidak ada mata pelajaran</span>
                                     )}
                                 </div>
                             </div>

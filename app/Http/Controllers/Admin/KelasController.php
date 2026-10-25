@@ -3,8 +3,6 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\JenjangKelas;
-use App\Models\Jurusan;
 use App\Models\Kelas;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -15,36 +13,18 @@ class KelasController extends Controller
     {
         $search = $request->query('search');
 
-        $kelasQuery = Kelas::with(['jurusan', 'jenjangKelas'])->orderBy('id', 'asc');
+        $kelasQuery = Kelas::orderBy('id', 'asc');
 
         if ($search) {
             $searchTrim = trim($search);
-            $aliasMap = ['RPL' => 'PPLG', 'TKJ' => 'TJKT'];
 
-            $kelasQuery->where(function ($q) use ($searchTrim, $aliasMap) {
-                // Cocok full_nama_kelas via concat (mis. "XII PPLG A") - case-insensitive di Postgres & MySQL
-                $q->whereRaw(
-                    "LOWER(CONCAT_WS(' ', COALESCE((SELECT nama_jenjang FROM jenjang_kelas WHERE jenjang_kelas.id = kelas.jenjang_kelas_id), ''), COALESCE((SELECT singkatan FROM jurusans WHERE jurusans.id = kelas.jurusan_id), ''), COALESCE(kelas.nama_kelas, ''))) LIKE ?",
-                    ['%'.strtolower($searchTrim).'%']
-                )
-                // Fallback: cocok komponen terpisah (case-insensitive)
-                    ->orWhereLike('nama_kelas', "%{$searchTrim}%")
-                    ->orWhereHas('jurusan', fn ($jq) => $jq->whereLike('singkatan', "%{$searchTrim}%")->orWhereLike('nama_jurusan', "%{$searchTrim}%"))
-                    ->orWhereHas('jenjangKelas', fn ($jq) => $jq->whereLike('nama_jenjang', "%{$searchTrim}%"));
-
-                // Alias: jika user ketik RPL, anggap juga PPLG
-                $upperSearch = strtoupper($searchTrim);
-                if (isset($aliasMap[$upperSearch])) {
-                    $alias = $aliasMap[$upperSearch];
-                    $q->orWhereHas('jurusan', fn ($jq) => $jq->whereLike('singkatan', "%{$alias}%"));
-                }
+            $kelasQuery->where(function ($q) use ($searchTrim) {
+                $q->orWhereLike('nama_kelas', "%{$searchTrim}%");
             });
         }
 
         return Inertia::render('admin/kelas/index', [
             'kelas' => $kelasQuery->paginate(10)->withQueryString(),
-            'jurusans' => Jurusan::all(),
-            'jenjangKelasList' => JenjangKelas::orderBy('nama_jenjang')->get(),
             'filters' => ['search' => $search],
         ]);
     }
@@ -52,12 +32,9 @@ class KelasController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'jurusan_id' => 'required|exists:jurusans,id',
-            'jenjang_kelas_id' => 'nullable|exists:jenjang_kelas,id',
             'nama_kelas' => 'nullable|string|max:255',
         ]);
 
-        // Jika nama_kelas kosong, simpan sebagai null agar full_nama_kelas hanya jenjang + jurusan
         if (isset($validated['nama_kelas']) && trim($validated['nama_kelas']) === '') {
             $validated['nama_kelas'] = null;
         }
@@ -72,8 +49,6 @@ class KelasController extends Controller
         $kelas = Kelas::findOrFail($id);
 
         $validated = $request->validate([
-            'jurusan_id' => 'required|exists:jurusans,id',
-            'jenjang_kelas_id' => 'nullable|exists:jenjang_kelas,id',
             'nama_kelas' => 'nullable|string|max:255',
         ]);
 

@@ -40,14 +40,6 @@ class Guru extends Model
     }
 
     /**
-     * Get the mata pelajarans that the guru teaches.
-     */
-    public function mataPelajarans(): BelongsToMany
-    {
-        return $this->belongsToMany(MataPelajaran::class, 'guru_mata_pelajaran');
-    }
-
-    /**
      * Get the profile foto of the guru.
      */
     public function foto(): MorphOne

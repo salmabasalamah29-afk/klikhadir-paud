@@ -21,35 +21,18 @@ class SiswaController extends Controller
         $search = $request->input('search');
         $kelasId = $request->input('kelas_id');
 
-        $siswas = Siswa::with(['user', 'foto', 'kelas.jurusan', 'kelas.jenjangKelas'])
+        $siswas = Siswa::with(['user', 'foto', 'kelas'])
             ->where('is_alumni', false)
             ->when($kelasId, fn ($q) => $q->where('kelas_id', $kelasId))
             ->when($search, function ($query, $search) {
                 $searchTrim = trim($search);
-                $aliasMap = ['RPL' => 'PPLG', 'TKJ' => 'TJKT'];
 
-                $query->where(function ($q) use ($searchTrim, $aliasMap) {
-                    // Cocok nama/nis langsung (case-insensitive)
+                $query->where(function ($q) use ($searchTrim) {
                     $q->whereLike('nama', "%{$searchTrim}%")
                         ->orWhereLike('nis', "%{$searchTrim}%")
-                        // Cocok full_nama_kelas via concat (mis. "XII PPLG A") - case-insensitive di Postgres & MySQL
                         ->orWhereHas('kelas', function ($kq) use ($searchTrim) {
-                            $kq->whereRaw(
-                                "LOWER(CONCAT_WS(' ', COALESCE((SELECT nama_jenjang FROM jenjang_kelas WHERE jenjang_kelas.id = kelas.jenjang_kelas_id), ''), COALESCE((SELECT singkatan FROM jurusans WHERE jurusans.id = kelas.jurusan_id), ''), COALESCE(kelas.nama_kelas, ''))) LIKE ?",
-                                ['%'.strtolower($searchTrim).'%']
-                            );
-                        })
-                        // Fallback: cocok komponen terpisah (case-insensitive)
-                        ->orWhereHas('kelas.jenjangKelas', fn ($jq) => $jq->whereLike('nama_jenjang', "%{$searchTrim}%"))
-                        ->orWhereHas('kelas.jurusan', fn ($jq) => $jq->whereLike('singkatan', "%{$searchTrim}%")->orWhereLike('nama_jurusan', "%{$searchTrim}%"))
-                        ->orWhereHas('kelas', fn ($kq) => $kq->whereLike('nama_kelas', "%{$searchTrim}%"));
-
-                    // Alias: jika user ketik RPL, anggap juga PPLG (untuk pencarian parsial jurusan)
-                    $upperSearch = strtoupper($searchTrim);
-                    if (isset($aliasMap[$upperSearch])) {
-                        $alias = $aliasMap[$upperSearch];
-                        $q->orWhereHas('kelas.jurusan', fn ($jq) => $jq->whereLike('singkatan', "%{$alias}%"));
-                    }
+                            $kq->whereLike('nama_kelas', "%{$searchTrim}%");
+                        });
                 });
             })
             ->orderBy('nis', 'desc')
@@ -58,14 +41,14 @@ class SiswaController extends Controller
 
         return Inertia::render('admin/siswa/index', [
             'siswas' => $siswas,
-            'kelasList' => Kelas::with(['jurusan', 'jenjangKelas'])->orderByRaw("COALESCE((SELECT nama_jenjang FROM jenjang_kelas WHERE jenjang_kelas.id = kelas.jenjang_kelas_id), '')")->orderByRaw("COALESCE((SELECT singkatan FROM jurusans WHERE jurusans.id = kelas.jurusan_id), '')")->orderBy('nama_kelas')->get(),
+            'kelasList' => Kelas::orderBy('nama_kelas')->get(),
             'filters' => ['search' => $search, 'kelas_id' => $kelasId],
         ]);
     }
 
     public function show(string $id)
     {
-        $siswa = Siswa::with(['user', 'foto', 'kelas.jurusan', 'kelas.jenjangKelas'])
+        $siswa = Siswa::with(['user', 'foto', 'kelas'])
             ->findOrFail($id);
 
         return Inertia::render('admin/siswa/profil', [
@@ -79,10 +62,29 @@ class SiswaController extends Controller
 
         $validated = $request->validate([
             'nis' => ['required', 'string', 'max:20', 'unique:siswas,nis', 'regex:/^[0-9]{2}\.[0-9]{6}$/'],
+            'nisn' => 'nullable|string|max:20',
+            'nik' => 'nullable|string|max:20',
             'nama' => 'required|string|max:255',
+            'nama_panggilan' => 'nullable|string|max:100',
             'jenis_kelamin' => 'nullable|in:laki-laki,perempuan',
-            'foto' => 'nullable|file|mimes:jpg,jpeg,png|max:5120',
+            'tempat_lahir' => 'nullable|string|max:100',
+            'tanggal_lahir' => 'nullable|date',
+            'agama' => 'nullable|string|max:50',
+            'tanggal_masuk' => 'nullable|date',
+            'nama_ayah' => 'nullable|string|max:100',
+            'pekerjaan_ayah' => 'nullable|string|max:100',
+            'nama_ibu' => 'nullable|string|max:100',
+            'pekerjaan_ibu' => 'nullable|string|max:100',
+            'no_hp' => 'nullable|string|max:20',
+            'anak_ke' => 'nullable|string|max:10',
+            'nama_jalan' => 'nullable|string|max:100',
+            'desa' => 'nullable|string|max:100',
+            'kecamatan' => 'nullable|string|max:100',
+            'kabupaten_kota' => 'nullable|string|max:100',
+            'provinsi' => 'nullable|string|max:100',
+            'kode_pos' => 'nullable|string|max:10',
             'kelas_id' => 'required|exists:kelas,id',
+            'foto' => 'nullable|file|mimes:jpg,jpeg,png|max:5120',
         ], [
             'nis.regex' => 'Format NIS harus berupa XX.XXXXXX (misal: 24.012505).',
             'foto.mimes' => 'Foto harus format JPG, JPEG, atau PNG.',
@@ -101,8 +103,27 @@ class SiswaController extends Controller
             'user_id' => $user->id,
             'kelas_id' => $validated['kelas_id'],
             'nis' => $validated['nis'],
+            'nisn' => $validated['nisn'] ?? null,
+            'nik' => $validated['nik'] ?? null,
             'nama' => $validated['nama'],
+            'nama_panggilan' => $validated['nama_panggilan'] ?? null,
             'jenis_kelamin' => $validated['jenis_kelamin'] ?? null,
+            'tempat_lahir' => $validated['tempat_lahir'] ?? null,
+            'tanggal_lahir' => $validated['tanggal_lahir'] ?? null,
+            'agama' => $validated['agama'] ?? null,
+            'tanggal_masuk' => $validated['tanggal_masuk'] ?? null,
+            'nama_ayah' => $validated['nama_ayah'] ?? null,
+            'pekerjaan_ayah' => $validated['pekerjaan_ayah'] ?? null,
+            'nama_ibu' => $validated['nama_ibu'] ?? null,
+            'pekerjaan_ibu' => $validated['pekerjaan_ibu'] ?? null,
+            'no_hp' => $validated['no_hp'] ?? null,
+            'anak_ke' => $validated['anak_ke'] ?? null,
+            'nama_jalan' => $validated['nama_jalan'] ?? null,
+            'desa' => $validated['desa'] ?? null,
+            'kecamatan' => $validated['kecamatan'] ?? null,
+            'kabupaten_kota' => $validated['kabupaten_kota'] ?? null,
+            'provinsi' => $validated['provinsi'] ?? null,
+            'kode_pos' => $validated['kode_pos'] ?? null,
         ]);
 
         if ($request->hasFile('foto')) {
@@ -119,8 +140,27 @@ class SiswaController extends Controller
 
         $validated = $request->validate([
             'nis' => ['required', 'string', 'max:20', Rule::unique('siswas')->ignore($siswa->id), 'regex:/^[0-9]{2}\.[0-9]{6}$/'],
+            'nisn' => 'nullable|string|max:20',
+            'nik' => 'nullable|string|max:20',
             'nama' => 'required|string|max:255',
+            'nama_panggilan' => 'nullable|string|max:100',
             'jenis_kelamin' => 'nullable|in:laki-laki,perempuan',
+            'tempat_lahir' => 'nullable|string|max:100',
+            'tanggal_lahir' => 'nullable|date',
+            'agama' => 'nullable|string|max:50',
+            'tanggal_masuk' => 'nullable|date',
+            'nama_ayah' => 'nullable|string|max:100',
+            'pekerjaan_ayah' => 'nullable|string|max:100',
+            'nama_ibu' => 'nullable|string|max:100',
+            'pekerjaan_ibu' => 'nullable|string|max:100',
+            'no_hp' => 'nullable|string|max:20',
+            'anak_ke' => 'nullable|string|max:10',
+            'nama_jalan' => 'nullable|string|max:100',
+            'desa' => 'nullable|string|max:100',
+            'kecamatan' => 'nullable|string|max:100',
+            'kabupaten_kota' => 'nullable|string|max:100',
+            'provinsi' => 'nullable|string|max:100',
+            'kode_pos' => 'nullable|string|max:10',
             'kelas_id' => 'required|exists:kelas,id',
             'password' => 'nullable|string|min:8',
             'foto' => 'nullable|file|mimes:jpg,jpeg,png|max:5120',
@@ -133,9 +173,28 @@ class SiswaController extends Controller
 
         $siswa->update([
             'nis' => $validated['nis'],
+            'nisn' => $validated['nisn'] ?? null,
+            'nik' => $validated['nik'] ?? null,
             'nama' => $validated['nama'],
+            'nama_panggilan' => $validated['nama_panggilan'] ?? null,
             'kelas_id' => $validated['kelas_id'],
             'jenis_kelamin' => $validated['jenis_kelamin'] ?? null,
+            'tempat_lahir' => $validated['tempat_lahir'] ?? null,
+            'tanggal_lahir' => $validated['tanggal_lahir'] ?? null,
+            'agama' => $validated['agama'] ?? null,
+            'tanggal_masuk' => $validated['tanggal_masuk'] ?? null,
+            'nama_ayah' => $validated['nama_ayah'] ?? null,
+            'pekerjaan_ayah' => $validated['pekerjaan_ayah'] ?? null,
+            'nama_ibu' => $validated['nama_ibu'] ?? null,
+            'pekerjaan_ibu' => $validated['pekerjaan_ibu'] ?? null,
+            'no_hp' => $validated['no_hp'] ?? null,
+            'anak_ke' => $validated['anak_ke'] ?? null,
+            'nama_jalan' => $validated['nama_jalan'] ?? null,
+            'desa' => $validated['desa'] ?? null,
+            'kecamatan' => $validated['kecamatan'] ?? null,
+            'kabupaten_kota' => $validated['kabupaten_kota'] ?? null,
+            'provinsi' => $validated['provinsi'] ?? null,
+            'kode_pos' => $validated['kode_pos'] ?? null,
         ]);
 
         $userUpdate = [

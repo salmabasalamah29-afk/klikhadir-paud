@@ -15,7 +15,7 @@ class AlumniController extends Controller
     {
         $tahunList = TahunAjaran::whereHas('arsipPresensis', fn ($q) => $q->where('is_alumni', true))
             ->withCount(['arsipPresensis as alumni_count' => fn ($q) => $q->where('is_alumni', true)])
-            ->orderByRaw('CAST(tahun_awal AS INTEGER) DESC')
+            ->orderByRaw('CAST(tahun_awal AS UNSIGNED) DESC')
             ->get();
 
         return Inertia::render('admin/alumni/tahun', ['tahunList' => $tahunList]);
@@ -24,13 +24,11 @@ class AlumniController extends Controller
     public function kelas(Request $request, TahunAjaran $tahunAjaran)
     {
         $kelasIds = ArsipPresensi::where('tahun_ajaran_id', $tahunAjaran->id)->where('is_alumni', true)->distinct()->pluck('kelas_id');
-        $kelasList = Kelas::with(['jurusan', 'jenjangKelas'])->whereIn('id', $kelasIds)->orderBy('nama_kelas')->get()
+        $kelasList = Kelas::whereIn('id', $kelasIds)->orderBy('nama_kelas')->get()
             ->map(fn ($k) => [
                 'id' => $k->id,
                 'full_nama_kelas' => $k->full_nama_kelas,
                 'nama_kelas' => $k->nama_kelas,
-                'jurusan' => $k->jurusan,
-                'jenjangKelas' => $k->jenjangKelas,
                 'alumni_count' => ArsipPresensi::where('tahun_ajaran_id', $tahunAjaran->id)->where('kelas_id', $k->id)->where('is_alumni', true)
                     ->selectRaw('COUNT(DISTINCT COALESCE(siswa_nis, siswa_id)) as c')->value('c') ?? 0,
             ]);
@@ -51,6 +49,6 @@ class AlumniController extends Controller
                 'kelas' => $a->kelas?->full_nama_kelas ?? $kelas->full_nama_kelas,
             ]);
 
-        return Inertia::render('admin/alumni/detail', ['tahunAjaran' => $tahunAjaran, 'kelas' => $kelas->load(['jurusan', 'jenjangKelas']), 'records' => $rows]);
+        return Inertia::render('admin/alumni/detail', ['tahunAjaran' => $tahunAjaran, 'kelas' => $kelas, 'records' => $rows]);
     }
 }

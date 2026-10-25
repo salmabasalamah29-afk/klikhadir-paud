@@ -4,8 +4,6 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\ArsipPresensi;
-use App\Models\JenjangKelas;
-use App\Models\Jurusan;
 use App\Models\Kelas;
 use App\Models\TahunAjaran;
 use Carbon\Carbon;
@@ -17,24 +15,19 @@ class ArsipController extends Controller
 {
     public function tingkat(Request $request, TahunAjaran $tahunAjaran)
     {
-        $jenjangs = JenjangKelas::orderBy('urutan')->get();
-        $jurusans = Jurusan::orderBy('singkatan')->get();
         $hasAnyArsip = ArsipPresensi::where('tahun_ajaran_id', $tahunAjaran->id)->exists();
 
-        return Inertia::render('admin/arsip/tingkat', ['tahunAjaran' => $tahunAjaran, 'jenjangs' => $jenjangs, 'jurusans' => $jurusans, 'hasAnyArsip' => $hasAnyArsip]);
+        return Inertia::render('admin/arsip/tingkat', ['tahunAjaran' => $tahunAjaran, 'hasAnyArsip' => $hasAnyArsip]);
     }
 
-    public function kelas(Request $request, TahunAjaran $tahunAjaran, string $jenjangId, string $jurusanId)
+    public function kelas(Request $request, TahunAjaran $tahunAjaran)
     {
         $kelasIdsWithArsip = ArsipPresensi::where('tahun_ajaran_id', $tahunAjaran->id)->distinct()->pluck('kelas_id');
-        $kelasList = Kelas::with(['jurusan', 'jenjangKelas'])
-            ->where('jenjang_kelas_id', $jenjangId)
-            ->where('jurusan_id', $jurusanId)
-            ->whereIn('id', $kelasIdsWithArsip)
+        $kelasList = Kelas::whereIn('id', $kelasIdsWithArsip)
             ->orderBy('nama_kelas')
             ->get();
 
-        return Inertia::render('admin/arsip/kelas', ['tahunAjaran' => $tahunAjaran, 'kelasList' => $kelasList, 'jenjang' => JenjangKelas::findOrFail($jenjangId), 'jurusan' => Jurusan::findOrFail($jurusanId)]);
+        return Inertia::render('admin/arsip/kelas', ['tahunAjaran' => $tahunAjaran, 'kelasList' => $kelasList]);
     }
 
     public function detail(Request $request, TahunAjaran $tahunAjaran, Kelas $kelas)
@@ -98,7 +91,7 @@ class ArsipController extends Controller
 
         return Inertia::render('admin/arsip/detail', [
             'tahunAjaran' => $tahunAjaran,
-            'kelas' => $kelas->load(['jurusan', 'jenjangKelas']),
+            'kelas' => $kelas,
             'records' => $grouped->map(fn ($a) => [
                 'id' => $a->id,
                 'nis' => $a->siswa_nis ?? $a->siswa?->nis,
@@ -110,7 +103,6 @@ class ArsipController extends Controller
                 'tanggal' => $a->tanggal->format('Y-m-d'),
                 'tanggal_formatted' => $a->tanggal->format('d-m-Y'),
                 'jam_ke' => $a->jam_ke,
-                'mapel' => $a->mapel?->nama_mapel ?? '-',
                 'guru' => $a->guru?->nama ?? '-',
                 'keterangan' => $a->keterangan,
                 'bukti' => $a->bukti,
@@ -121,7 +113,7 @@ class ArsipController extends Controller
 
     public function export(Request $request, TahunAjaran $tahunAjaran, Kelas $kelas)
     {
-        $raw = ArsipPresensi::with(['siswa.kelas.jurusan', 'siswa.kelas.jenjangKelas', 'guru', 'mapel'])
+        $raw = ArsipPresensi::with(['siswa', 'guru'])
             ->where('tahun_ajaran_id', $tahunAjaran->id)
             ->where('kelas_id', $kelas->id)
             ->orderBy('tanggal', 'asc')

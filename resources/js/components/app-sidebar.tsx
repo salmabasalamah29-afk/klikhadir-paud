@@ -18,10 +18,11 @@ import { UserMenuContent } from '@/components/user-menu-content';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import admin from '@/routes/admin';
 import adminTahunAjaran from '@/routes/admin/tahun-ajaran';
-import adminJenjang from '@/routes/admin/jenjang';
 import { profil as guruProfil } from '@/routes/guru';
 import guruRoutes from '@/routes/guru/absensi';
 import absensiData from '@/routes/guru/data-absensi';
+import guruPresensiDiri from '@/routes/guru/presensi-diri';
+import guruLihatPresensi from '@/routes/guru/lihat-presensi';
 import exportAbsensi from '@/routes/guru/export';
 import guruPassword from '@/routes/guru/password';
 import { dashboard as siswaDashboard } from '@/routes/siswa';
@@ -66,34 +67,9 @@ export function AppSidebar() {
                 icon: Calendar,
             },
             {
-                title: 'Jurusan',
-                href: admin.jurusan.index.url(),
-                icon: School,
-            },
-            {
-                title: 'Jenjang',
-                href: adminJenjang.index.url(),
-                icon: ListOrdered,
-            },
-            {
                 title: 'Kelas',
                 href: admin.kelas.index.url(),
                 icon: GraduationCap,
-            },
-            {
-                title: 'Kategori Pelajaran',
-                href: admin.kategoriPembelajaran.index.url(),
-                icon: BookOpen,
-            },
-            {
-                title: 'Mata Pelajaran',
-                href: admin.matapelajaran.index.url(),
-                icon: BookOpen,
-            },
-            {
-                title: 'Durasi Pembelajaran',
-                href: admin.durasiPembelajaran.index.url(),
-                icon: Clock,
             },
             {
                 title: 'Guru',
@@ -101,7 +77,7 @@ export function AppSidebar() {
                 icon: Users,
             },
             {
-                title: 'Siswa',
+                title: 'Murid',
                 href: admin.siswa.index.url(),
                 icon: UserCircle,
             },
@@ -119,17 +95,22 @@ export function AppSidebar() {
     } else if (userRole === 'guru') {
         mainNavItems = [
             {
-                title: 'Input Presensi',
+                title: 'Presensi Siswa',
                 href: guruRoutes.index.url(),
                 icon: ClipboardList,
             },
             {
-                title: 'Lihat Presensi',
-                href: absensiData.index.url(),
+                title: 'Presensi Guru',
+                href: guruPresensiDiri.index.url(),
+                icon: Clock,
+            },
+            {
+                title: 'Lihat Presensi Siswa',
+                href: guruLihatPresensi.index.url(),
                 icon: BookOpen,
             },
             {
-                title: 'Export Presensi',
+                title: 'Ekspor Presensi Siswa',
                 href: exportAbsensi.index.url(),
                 icon: FileSpreadsheet,
             },

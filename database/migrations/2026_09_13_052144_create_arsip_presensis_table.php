@@ -13,23 +13,20 @@ return new class extends Migration
     {
         Schema::create('arsip_presensis', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('tahun_ajaran_id')->constrained('tahun_ajarans')->cascadeOnDelete();
-            $table->foreignId('siswa_id')->nullable()->constrained('siswas')->nullOnDelete();
-            $table->foreignId('kelas_id')->nullable()->constrained('kelas')->nullOnDelete();
-            $table->foreignId('guru_id')->nullable()->constrained('gurus')->nullOnDelete();
-            $table->foreignId('mapel_id')->nullable()->constrained('mata_pelajarans')->nullOnDelete();
+            $table->foreignId('tahun_ajaran_id')->constrained('tahun_ajarans')->onDelete('cascade');
+            $table->foreignId('siswa_id')->constrained('siswas')->onDelete('cascade');
+            $table->foreignId('kelas_id')->constrained('kelas')->onDelete('cascade');
+            $table->foreignId('guru_id')->constrained('gurus')->onDelete('cascade');
             $table->date('tanggal');
             $table->string('jam_ke')->nullable();
-            $table->string('status');
-            $table->string('keterangan')->nullable();
+            $table->enum('status', ['hadir', 'sakit', 'izin', 'alpha', 'dispensasi'])->default('hadir');
+            $table->text('keterangan')->nullable();
             $table->string('bukti')->nullable();
             $table->boolean('is_alumni')->default(false);
             $table->string('siswa_nis', 20)->nullable();
             $table->string('siswa_nama')->nullable();
             $table->string('siswa_foto_url')->nullable();
             $table->timestamps();
-            $table->index(['tahun_ajaran_id', 'kelas_id']);
-            $table->index('tanggal');
         });
     }
 

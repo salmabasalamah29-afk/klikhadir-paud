@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
 
-#[Fillable(['user_id', 'kelas_id', 'nis', 'nama', 'jenis_kelamin', 'is_alumni'])]
+#[Fillable(['user_id', 'kelas_id', 'nis', 'nisn', 'nik', 'nama', 'nama_panggilan', 'jenis_kelamin', 'tempat_lahir', 'tanggal_lahir', 'agama', 'tanggal_masuk', 'nama_ayah', 'pekerjaan_ayah', 'nama_ibu', 'pekerjaan_ibu', 'no_hp', 'anak_ke', 'nama_jalan', 'desa', 'kecamatan', 'kabupaten_kota', 'provinsi', 'kode_pos', 'is_alumni'])]
 class Siswa extends Model
 {
     protected $appends = ['foto_url'];

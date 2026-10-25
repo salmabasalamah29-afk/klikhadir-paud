@@ -43,7 +43,7 @@ class HandleInertiaRequests extends Middleware
             if ($user->role === 'guru') {
                 $user->load('guru.foto');
             } elseif ($user->role === 'siswa') {
-                $user->load(['siswa.foto', 'siswa.kelas.jurusan', 'siswa.kelas.jenjangKelas']);
+                $user->load(['siswa.foto', 'siswa.kelas']);
             }
 
             $user->setAttribute('avatar', $this->profileAvatar($user));

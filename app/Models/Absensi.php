@@ -15,7 +15,6 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'status',
     'keterangan',
     'bukti',
-    'mapel_id',
     'jam_ke',
     'waktu_mulai',
     'waktu_selesai',
@@ -38,19 +37,6 @@ class Absensi extends Model
     public function guru(): BelongsTo
     {
         return $this->belongsTo(Guru::class);
-    }
-
-    /**
-     * Get the mata pelajaran associated with this attendance record.
-     */
-    public function mapel(): BelongsTo
-    {
-        return $this->belongsTo(MataPelajaran::class, 'mapel_id');
-    }
-
-    public function schedule(): BelongsTo
-    {
-        return $this->belongsTo(Schedule::class);
     }
 
     public function photos(): HasMany

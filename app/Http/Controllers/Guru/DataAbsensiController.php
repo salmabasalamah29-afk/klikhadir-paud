@@ -4,9 +4,7 @@ namespace App\Http\Controllers\Guru;
 
 use App\Http\Controllers\Controller;
 use App\Models\Absensi;
-use App\Models\DurasiPembelajaran;
 use App\Models\Kelas;
-use App\Models\Schedule;
 use App\Models\TahunAjaran;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -34,7 +32,7 @@ class DataAbsensiController extends Controller
         }
 
         // Universal: semua guru dapat lihat semua kelas (read-only) - per kelas 1 data 1 hari
-        $kelasList = Kelas::with(['jurusan', 'jenjangKelas'])->orderBy('id')->get();
+        $kelasList = Kelas::orderBy('id')->get();
 
         $absensis = [];
         $stats = ['hadir' => 0, 'sakit' => 0, 'izin' => 0, 'alpha' => 0, 'dispensasi' => 0];
@@ -43,18 +41,7 @@ class DataAbsensiController extends Controller
         $guruAktif = null;
 
         if ($selectedKelasId && $tanggal && ! $isOutOfYear) {
-            $dayName = Schedule::indonesianDayName($tanggal);
-            $schedules = DurasiPembelajaran::where('hari', $dayName)->orderBy('jam_ke')->get();
-
-            // Tentukan jam aktif berdasarkan waktu sekarang jika tanggal adalah hari ini
-            if ($tanggal === now()->toDateString()) {
-                $now = now()->format('H:i:s');
-                $jamAktif = $schedules->first(function ($j) use ($now) {
-                    return $j->waktu_mulai <= $now && $now <= $j->waktu_selesai;
-                });
-            }
-
-            $query = Absensi::with(['siswa.kelas.jurusan', 'siswa.kelas.jenjangKelas', 'siswa.foto', 'guru', 'mapel.kategoriPembelajaran'])
+            $query = Absensi::with(['siswa.kelas', 'siswa.foto', 'guru'])
                 ->whereHas('siswa', function ($q) use ($selectedKelasId) {
                     $q->where('kelas_id', $selectedKelasId)
                         ->where('is_alumni', false);
@@ -69,11 +56,9 @@ class DataAbsensiController extends Controller
 
             $raw = $query->get();
 
-            // Gabungkan per siswa: status Sakit/Izin/Dispensasi/Alpha berlaku seharian, jadi jangan biarkan Hadir di jam selanjutnya menimpa surat sebelumnya.
-            // Ambil data terbaru per siswa dengan merge bukti: pilih baris berhalangan terbaru jika ada, dan pertahankan bukti terbaru seharian.
+            // Gabungkan per siswa: status Sakit/Izin/Dispensasi/Alpha berlaku seharian
             $grouped = $raw->groupBy('siswa_id');
             $latestPerSiswa = $grouped->map(function ($group) {
-                // Urutkan grup dari terbaru (updated_at desc, id desc)
                 $sorted = $group->sort(function ($a, $b) {
                     $ta = $a->updated_at ? $a->updated_at->getTimestamp() : 0;
                     $tb = $b->updated_at ? $b->updated_at->getTimestamp() : 0;
@@ -84,7 +69,6 @@ class DataAbsensiController extends Controller
                     return $tb <=> $ta;
                 })->values();
 
-                // Prioritas: baris berhalangan (sakit/izin/dispensasi/alpha) berlaku seharian mengalahkan Hadir
                 $berhalangan = $sorted->first(function ($item) {
                     return in_array($item->status, ['sakit', 'izin', 'dispensasi', 'alpha'], true);
                 });
@@ -93,20 +77,15 @@ class DataAbsensiController extends Controller
                     return null;
                 }
 
-                // Preserve bukti: jika primary tidak punya bukti, ambil bukti terbaru dari grup (dari guru/jam mana pun) agar surat tidak hilang
                 if (empty($primary->bukti)) {
                     $latestBukti = $sorted->first(function ($item) {
                         return ! empty($item->bukti);
                     });
                     if ($latestBukti) {
                         $primary->setAttribute('bukti', $latestBukti->bukti);
-                        // Jika primary Hadir tapi bukti berasal dari berhalangan, tetap tampilkan status berhalangan tersebut
-                        // (sudah ter-handle karena primary dipilih dari berhalangan). Jika primary berhalangan tanpa bukti,
-                        // bukti dari record lain tetap ditampilkan.
                     }
                 }
 
-                // Preserve keterangan untuk Alpha jika kosong
                 if ($primary->status === 'alpha' && empty(trim((string) $primary->keterangan))) {
                     $withKet = $sorted->first(function ($item) {
                         return $item->status === 'alpha' && ! empty(trim((string) $item->keterangan));
@@ -119,7 +98,6 @@ class DataAbsensiController extends Controller
                 return $primary;
             })->filter()->values();
 
-            // Urutkan dari absen: sesuai no urut/NIS di admin (jangan diubah), pakai NIS string natural order, fallback ke id
             $latestPerSiswa = $latestPerSiswa->sortBy(function ($a) {
                 $nis = trim((string) ($a->siswa?->nis ?? ''));
                 if ($nis !== '') {
@@ -129,58 +107,21 @@ class DataAbsensiController extends Controller
                 return sprintf('%08d', $a->siswa_id);
             }, SORT_NATURAL)->values();
 
-            // Hitung stats dari latest per siswa (seperti statistik admin)
             foreach ($latestPerSiswa as $abs) {
                 if (isset($stats[$abs->status])) {
                     $stats[$abs->status]++;
                 }
             }
 
-            // Jika ada jam aktif, cari guru aktif (guru terakhir yang update pada jam tersebut)
-            // Waktu update: waktu guru terakhir mengabsen (submit) untuk kelas ini, bukan waktu user buka halaman
-            if ($jamAktif) {
-                $guruAktifRecord = $raw->firstWhere('jam_ke', (string) $jamAktif->jam_ke);
-                if ($guruAktifRecord && $guruAktifRecord->guru) {
-                    $guruAktif = [
-                        'id' => $guruAktifRecord->guru->id,
-                        'nama' => $guruAktifRecord->guru->nama,
-                        'jam_ke' => $jamAktif->jam_ke,
-                        'waktu' => substr($jamAktif->waktu_mulai, 0, 5).' - '.substr($jamAktif->waktu_selesai, 0, 5),
-                        'updated_at' => $guruAktifRecord->updated_at ? $guruAktifRecord->updated_at->timezone('Asia/Jakarta')->format('Y-m-d H:i:s') : null,
-                    ];
-                } else {
-                    // Jika jam aktif tapi belum ada yang absen di jam itu, fallback ke update terakhir overall
-                    $lastUpdateJam = $latestPerSiswa->sortByDesc('updated_at')->first();
-                    if ($lastUpdateJam) {
-                        $guruAktif = [
-                            'id' => $lastUpdateJam->guru?->id,
-                            'nama' => $lastUpdateJam->guru?->nama,
-                            'jam_ke' => $lastUpdateJam->jam_ke,
-                            'waktu' => $lastUpdateJam->waktu_mulai && $lastUpdateJam->waktu_selesai ? substr($lastUpdateJam->waktu_mulai, 0, 5).' - '.substr($lastUpdateJam->waktu_selesai, 0, 5) : substr($jamAktif->waktu_mulai, 0, 5).' - '.substr($jamAktif->waktu_selesai, 0, 5),
-                            'updated_at' => $lastUpdateJam->updated_at ? $lastUpdateJam->updated_at->timezone('Asia/Jakarta')->format('Y-m-d H:i:s') : null,
-                        ];
-                    } else {
-                        $guruAktif = [
-                            'id' => null,
-                            'nama' => null,
-                            'jam_ke' => $jamAktif->jam_ke,
-                            'waktu' => substr($jamAktif->waktu_mulai, 0, 5).' - '.substr($jamAktif->waktu_selesai, 0, 5),
-                            'updated_at' => null,
-                        ];
-                    }
-                }
-            } else {
-                // Fallback: guru terakhir yang melakukan update (overall) untuk indikator
-                $lastUpdate = $latestPerSiswa->sortByDesc('updated_at')->first();
-                if ($lastUpdate) {
-                    $guruAktif = [
-                        'id' => $lastUpdate->guru?->id,
-                        'nama' => $lastUpdate->guru?->nama,
-                        'jam_ke' => $lastUpdate->jam_ke,
-                        'waktu' => $lastUpdate->waktu_mulai && $lastUpdate->waktu_selesai ? substr($lastUpdate->waktu_mulai, 0, 5).' - '.substr($lastUpdate->waktu_selesai, 0, 5) : null,
-                        'updated_at' => $lastUpdate->updated_at ? $lastUpdate->updated_at->timezone('Asia/Jakarta')->format('Y-m-d H:i:s') : null,
-                    ];
-                }
+            $lastUpdate = $latestPerSiswa->sortByDesc('updated_at')->first();
+            if ($lastUpdate) {
+                $guruAktif = [
+                    'id' => $lastUpdate->guru?->id,
+                    'nama' => $lastUpdate->guru?->nama,
+                    'jam_ke' => $lastUpdate->jam_ke,
+                    'waktu' => $lastUpdate->waktu_mulai && $lastUpdate->waktu_selesai ? substr($lastUpdate->waktu_mulai, 0, 5).' - '.substr($lastUpdate->waktu_selesai, 0, 5) : null,
+                    'updated_at' => $lastUpdate->updated_at ? $lastUpdate->updated_at->timezone('Asia/Jakarta')->format('Y-m-d H:i:s') : null,
+                ];
             }
 
             $absensis = $latestPerSiswa->map(function ($absensi) {
@@ -190,7 +131,6 @@ class DataAbsensiController extends Controller
                 return [
                     'id' => $absensi->id,
                     'siswa_id' => $absensi->siswa_id,
-                    'mapel_id' => $absensi->mapel_id,
                     'tanggal' => $absensi->tanggal,
                     'jam_ke' => $absensi->jam_ke,
                     'waktu_mulai' => $absensi->waktu_mulai,
@@ -211,20 +151,12 @@ class DataAbsensiController extends Controller
                         'nama_kelas' => $kelas->nama_kelas,
                         'full_nama_kelas' => $kelas->full_nama_kelas,
                     ] : null,
-                    'mapel' => $absensi->mapel ? [
-                        'id' => $absensi->mapel->id,
-                        'nama_mapel' => $absensi->mapel->nama_mapel,
-                        'kategori' => $absensi->mapel->kategori ?? $absensi->mapel->kategoriPembelajaran?->nama_kategori ?? '-',
-                    ] : null,
                     'guru' => $absensi->guru ? [
                         'id' => $absensi->guru->id,
                         'nama' => $absensi->guru->nama,
                     ] : null,
                 ];
             })->values()->all();
-
-            // Fallback jika tidak ada absensi tapi ingin menampilkan daftar siswa dengan status kosong
-            // Untuk universal view, jika belum ada mapel filter, tetap tampilkan stats 0 dan list kosong
         }
 
         return Inertia::render('guru/absensi/data', [

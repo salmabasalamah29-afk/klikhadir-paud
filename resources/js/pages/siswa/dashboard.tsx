@@ -54,12 +54,8 @@ interface Props {
         nama: string;
         foto_url?: string | null;
         kelas: {
-            tingkat: string | null;
             nama_kelas: string;
             full_nama_kelas?: string;
-            jurusan: {
-                singkatan: string;
-            } | null;
         };
     };
     stats: {
@@ -98,7 +94,7 @@ export default function SiswaDashboard({ siswa, stats, history, activeYear = nul
     const getSuratLabel = (status: string, tanggal?: string) => {
         const jenis = status ? status.charAt(0).toUpperCase() + status.slice(1) : 'Surat';
         const nm = siswa.nama ? siswa.nama.toUpperCase().replace(/\s+/g, ' ').trim() : 'SISWA';
-        const kls = siswa.kelas.full_nama_kelas ?? [siswa.kelas.tingkat, siswa.kelas.jurusan?.singkatan, siswa.kelas.nama_kelas].filter(Boolean).join(' ') ?? '-';
+        const kls = siswa.kelas.full_nama_kelas ?? siswa.kelas.nama_kelas ?? '-';
         const tgl = tanggal ?? '-';
         return `${jenis}-${nm}-${kls}-${tgl}`;
     };
@@ -148,11 +144,7 @@ export default function SiswaDashboard({ siswa, stats, history, activeYear = nul
                     </Avatar>
                     <div>
                         <h1 className="text-2xl font-bold tracking-tight">
-                            {siswa.nama} — {siswa.kelas.full_nama_kelas || [
-                                siswa.kelas.tingkat,
-                                siswa.kelas.jurusan?.singkatan,
-                                siswa.kelas.nama_kelas
-                            ].filter(Boolean).join(' ')}
+                            {siswa.nama} — {siswa.kelas.full_nama_kelas || siswa.kelas.nama_kelas}
                         </h1>
                         <p className="text-sm text-muted-foreground">NIS: {siswa.nis}</p>
                     </div>

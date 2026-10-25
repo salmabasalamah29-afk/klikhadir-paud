@@ -1,5 +1,5 @@
 import { Head, useForm, router, Link } from '@inertiajs/react';
-import { Edit2, Trash2, Plus, Save, Users, BookOpen, KeyRound, Search, Eye } from 'lucide-react';
+import { Edit2, Trash2, Plus, Save, Users, KeyRound, Search, Eye } from 'lucide-react';
 import { useState, useRef } from 'react';
 import { toast } from 'sonner';
 import Pagination from '@/components/pagination';
@@ -30,36 +30,6 @@ import { useAutoRefresh } from '@/hooks/use-auto-refresh';
 import { dashboard as adminDashboard } from '@/routes/admin';
 import adminGuru from '@/routes/admin/guru';
 
-interface Kelas {
-    id: number;
-    nama_kelas: string;
-    full_nama_kelas: string;
-    jurusan?: {
-        singkatan: string;
-    };
-}
-
-interface MataPelajaran {
-    id: number;
-    nama_mapel: string;
-    kategori: string;
-}
-
-interface Guru {
-    id: number;
-    nip: string;
-    nama: string;
-    jenis_kelamin?: 'laki-laki' | 'perempuan' | null;
-    foto_url?: string | null;
-    user?: {
-        email: string;
-        password_default: boolean;
-    };
-    kelas?: Kelas[];
-    mataPelajarans?: MataPelajaran[];
-    mata_pelajarans?: MataPelajaran[];
-}
-
 interface PaginatedData<T> {
     data: T[];
     links: {
@@ -70,13 +40,9 @@ interface PaginatedData<T> {
 }
 
 export default function GuruIndex({ 
-    gurus,
-    kelas,
-    mataPelajarans
+    gurus = [],
 }: { 
     gurus: PaginatedData<Guru>;
-    kelas: Kelas[];
-    mataPelajarans: MataPelajaran[];
 }) {
     const [editingGuru, setEditingGuru] = useState<Guru | null>(null);
     const [deletingGuruId, setDeletingGuruId] = useState<number | null>(null);
@@ -96,21 +62,12 @@ export default function GuruIndex({
     });
     const searchTimeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-    const [kelasSearch, setKelasSearch] = useState('');
-    const [mapelSearch, setMapelSearch] = useState('');
-
-    const filteredKelas = kelas.filter(k => k.full_nama_kelas.toLowerCase().includes(kelasSearch.toLowerCase()));
-    const filteredMapel = mataPelajarans.filter(m => m.nama_mapel.toLowerCase().includes(mapelSearch.toLowerCase()) || m.kategori.toLowerCase().includes(mapelSearch.toLowerCase()));
-
     const { data, setData, post, put, processing, errors, reset, clearErrors } = useForm({
-        nip: '',
         nama: '',
         jenis_kelamin: '',
         password: '',
         foto: null as string | File | null,
         remove_foto: false,
-        kelas_ids: [] as number[],
-        mata_pelajaran_ids: [] as number[],
     });
 
     const handleFotoChange = (file: File | null) => {
@@ -140,12 +97,6 @@ export default function GuruIndex({
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (data.nip.length !== 18) {
-            toast.error('NIP harus terdiri dari 18 karakter');
-
-            return;
-        }
-
         if (editingGuru) {
             put(adminGuru.update.url({ guru: editingGuru.id }), {
                 preserveScroll: true,
@@ -174,17 +125,12 @@ export default function GuruIndex({
     const handleEdit = (guru: Guru) => {
         setEditingGuru(guru);
         clearErrors();
-        const gKelas = guru.kelas ?? (guru as unknown as { kelas: Kelas[] }).kelas ?? [];
-        const gMapels = guru.mataPelajarans ?? guru.mata_pelajarans ?? [];
         setData({
-            nip: guru.nip,
             nama: guru.nama,
             jenis_kelamin: guru.jenis_kelamin ?? '',
             password: '',
             foto: guru.foto_url ?? null,
             remove_foto: false,
-            kelas_ids: gKelas.map((k) => k.id),
-            mata_pelajaran_ids: gMapels.map((m) => m.id),
         });
         setShowForm(true);
     };
@@ -196,30 +142,10 @@ export default function GuruIndex({
         setShowForm(false);
     };
 
-    const handleKelasToggle = (kelasId: number) => {
-        const isSelected = data.kelas_ids.includes(kelasId);
-
-        if (isSelected) {
-            setData('kelas_ids', data.kelas_ids.filter(id => id !== kelasId));
-        } else {
-            setData('kelas_ids', [...data.kelas_ids, kelasId]);
-        }
-    };
-
-    const handleMataPelajaranToggle = (mapelId: number) => {
-        const isSelected = data.mata_pelajaran_ids.includes(mapelId);
-
-        if (isSelected) {
-            setData('mata_pelajaran_ids', data.mata_pelajaran_ids.filter(id => id !== mapelId));
-        } else {
-            setData('mata_pelajaran_ids', [...data.mata_pelajaran_ids, mapelId]);
-        }
-    };
-
     const executeDelete = () => {
         if (!deletingGuruId) {
-return;
-}
+            return;
+        }
 
         router.delete(adminGuru.destroy.url({ guru: deletingGuruId }), {
             preserveScroll: true,
@@ -234,8 +160,8 @@ return;
 
     const executeResetPassword = () => {
         if (!resettingPasswordGuruId) {
-return;
-}
+            return;
+        }
 
         router.post(adminGuru.resetPassword.url({ guru: resettingPasswordGuruId }), {}, {
             preserveScroll: true,
@@ -258,14 +184,14 @@ return;
                             Manajemen Guru
                         </h1>
                         <p className="text-muted-foreground">
-                            Kelola akun dan penempatan mengajar guru.
+                            Kelola data dan akun akses guru.
                         </p>
                     </div>
                     <div className="flex items-center gap-2">
                         <Button onClick={handleOpenCreate} className="bg-white text-black border border-zinc-200 shadow-xs hover:bg-zinc-50 dark:bg-white dark:text-black dark:border-zinc-200 dark:hover:bg-zinc-100">
                             <Plus className="mr-2 h-4 w-4" /> Tambah
                         </Button>
-                        <CsvImport entity="guru" title="Impor Guru" description="Header: nip, nama, jenis_kelamin, kelas, mata_pelajaran" />
+                        <CsvImport entity="guru" title="Impor Guru" description="Header: nama, jenis_kelamin" />
                     </div>
                 </div>
 
@@ -273,7 +199,7 @@ return;
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
-                            placeholder="Cari NIP, nama, kelas, atau mata pelajaran"
+                            placeholder="Cari nama guru"
                             value={search}
                             onChange={(e) => handleSearch(e.target.value)}
                             className="pl-9 bg-muted/30"
@@ -285,16 +211,10 @@ return;
                                 <thead className="bg-muted/50 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
                                     <tr>
                                         <th scope="col" className="px-3 py-2.5">
-                                            NIP
-                                        </th>
-                                        <th scope="col" className="px-3 py-2.5">
                                             Nama Guru
                                         </th>
                                         <th scope="col" className="px-3 py-2.5">
-                                            Kelas Diampu
-                                        </th>
-                                        <th scope="col" className="px-3 py-2.5">
-                                            Mata Pelajaran
+                                            Jenis Kelamin
                                         </th>
                                         <th scope="col" className="px-3 py-2.5">
                                             Status Kata Sandi
@@ -313,9 +233,6 @@ return;
                                             key={guru.id}
                                             className={`group transition-colors hover:bg-muted/30 ${editingGuru?.id === guru.id ? 'bg-primary/5' : ''}`}
                                         >
-                                            <td className="px-3 py-2.5 font-mono text-xs font-medium">
-                                                {guru.nip}
-                                            </td>
                                             <td className="px-3 py-2.5 font-medium text-foreground">
                                                 <div className="flex items-center gap-3">
                                                     <Avatar className="size-7 shrink-0 overflow-hidden rounded-full">
@@ -328,37 +245,7 @@ return;
                                                 </div>
                                             </td>
                                             <td className="px-3 py-2.5">
-                                                <div className="flex flex-wrap gap-1">
-                                                    {guru.kelas && guru.kelas.length > 0 ? (
-                                                        guru.kelas.map(k => (
-                                                            <span key={k.id} className="inline-flex items-center rounded-md bg-green-500/10 px-2 py-1 text-[10px] font-medium text-green-600 ring-1 ring-inset ring-green-500/20 dark:text-green-400">
-                                                                {k.full_nama_kelas}
-                                                            </span>
-                                                        ))
-                                                    ) : (
-                                                        <span className="text-xs text-muted-foreground italic">-</span>
-                                                    )}
-                                                </div>
-                                            </td>
-                                            <td className="px-3 py-2.5">
-                                                <div className="flex flex-wrap gap-1">
-                                                    {(() => {
-                                                        const mapels = guru.mataPelajarans ?? guru.mata_pelajarans ?? [];
-                                                        return mapels.length > 0 ? (
-                                                            mapels.map((m) => (
-                                                                <span
-                                                                    key={m.id}
-                                                                    className="inline-flex items-center rounded-md bg-blue-500/10 px-2 py-1 text-[10px] font-medium text-blue-600 ring-1 ring-inset ring-blue-500/20 dark:text-blue-400"
-                                                                >
-                                                                    {m.nama_mapel}
-                                                                    {m.kategori ? ` (${m.kategori})` : ''}
-                                                                </span>
-                                                            ))
-                                                        ) : (
-                                                            <span className="text-xs text-muted-foreground italic">-</span>
-                                                        );
-                                                    })()}
-                                                </div>
+                                                {guru.jenis_kelamin === 'laki-laki' ? 'Laki-laki' : guru.jenis_kelamin === 'perempuan' ? 'Perempuan' : '-'}
                                             </td>
                                             <td className="px-3 py-2.5">
                                                 {guru.user?.password_default ? (
@@ -415,10 +302,10 @@ return;
                                     ))}
                                     {gurus.data.length === 0 && (
                                         <tr>
-                                            <td
-                                                colSpan={6}
-                                                className="px-3 py-10 text-center text-muted-foreground"
-                                            >
+                                        <td
+                                            colSpan={4}
+                                            className="px-3 py-10 text-center text-muted-foreground"
+                                        >
                                                 <div className="flex flex-col items-center gap-2">
                                                     <Users className="h-8 w-8 opacity-20" />
                                                     <p>Belum ada data guru.</p>
@@ -435,7 +322,7 @@ return;
             </div>
 
             <Dialog open={showForm} onOpenChange={setShowForm}>
-                <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
+                <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>{editingGuru ? 'Edit Guru' : 'Tambah Guru'}</DialogTitle>
                         <DialogDescription>Kelola data guru</DialogDescription>
@@ -456,31 +343,6 @@ return;
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="nip">NIP (Tepat 18 Karakter)</Label>
-                            <Input
-                                id="nip"
-                                value={data.nip}
-                                onChange={(e) => {
-                                    const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 18);
-                                    setData('nip', val);
-                                }}
-                                placeholder="Contoh: 198001012010011001"
-                                className={`bg-muted/30 ${data.nip.length > 0 && data.nip.length !== 18 ? 'border-destructive focus-visible:ring-destructive' : ''}`}
-                                maxLength={18}
-                            />
-                            {data.nip.length > 0 && data.nip.length !== 18 && (
-                                <p className="text-[11px] text-destructive">
-                                    Panjang NIP: {data.nip.length} (Kurang {18 - data.nip.length} karakter)
-                                </p>
-                            )}
-                            {errors.nip && (
-                                <p className="text-xs text-destructive">
-                                    {errors.nip}
-                                </p>
-                            )}
-                        </div>
-
-                        <div className="space-y-2">
                             <Label htmlFor="nama">Nama Lengkap</Label>
                             <Input
                                 id="nama"
@@ -488,7 +350,7 @@ return;
                                 onChange={(e) =>
                                     setData('nama', e.target.value)
                                 }
-                                placeholder="Contoh: Budi Santoso, S.Pd"
+                                placeholder="Contoh: Lilis Lestari"
                                 className="bg-muted/30"
                             />
                             {errors.nama && (
@@ -515,84 +377,6 @@ return;
                             {errors.jenis_kelamin && (
                                 <p className="text-xs text-destructive">
                                     {errors.jenis_kelamin}
-                                </p>
-                            )}
-                        </div>
-
-                        <div className="space-y-3 pt-2 border-t border-sidebar-border/50">
-                            <Label className="flex items-center gap-1">
-                                <Users className="h-4 w-4" /> Mengampu di Kelas
-                            </Label>
-                            <div className="relative mt-2">
-                                <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-                                <Input
-                                    placeholder="Cari kelas..."
-                                    value={kelasSearch}
-                                    onChange={(e) => setKelasSearch(e.target.value)}
-                                    className="h-8 pl-8 bg-muted/20 text-xs"
-                                />
-                            </div>
-                            <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto p-1 border border-sidebar-border/30 rounded-md">
-                                {filteredKelas.map(k => (
-                                    <div key={k.id} className="flex items-center space-x-2 bg-muted/30 p-2 rounded-md border border-sidebar-border/50">
-                                        <input
-                                            type="checkbox"
-                                            id={`kelas-${k.id}`}
-                                            className="rounded border-input text-primary shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50"
-                                            checked={data.kelas_ids.includes(k.id)}
-                                            onChange={() => handleKelasToggle(k.id)}
-                                        />
-                                        <Label htmlFor={`kelas-${k.id}`} className="text-xs cursor-pointer font-normal font-mono">
-                                            {k.full_nama_kelas}
-                                        </Label>
-                                    </div>
-                                ))}
-                                {filteredKelas.length === 0 && (
-                                    <p className="col-span-2 text-center text-xs text-muted-foreground py-3">Tidak ada kelas ditemukan</p>
-                                )}
-                            </div>
-                            {errors.kelas_ids && (
-                                <p className="text-xs text-destructive">
-                                    {errors.kelas_ids}
-                                </p>
-                            )}
-                        </div>
-
-                        <div className="space-y-3 pt-2 border-t border-sidebar-border/50">
-                            <Label className="flex items-center gap-1">
-                                <BookOpen className="h-4 w-4" /> Mengampu Mata Pelajaran
-                            </Label>
-                            <div className="relative mt-2">
-                                <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-                                <Input
-                                    placeholder="Cari mata pelajaran..."
-                                    value={mapelSearch}
-                                    onChange={(e) => setMapelSearch(e.target.value)}
-                                    className="h-8 pl-8 bg-muted/20 text-xs"
-                                />
-                            </div>
-                            <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto p-1 border border-sidebar-border/30 rounded-md">
-                                {filteredMapel.map(mapel => (
-                                    <div key={mapel.id} className="flex items-center space-x-2 bg-muted/30 p-2 rounded-md border border-sidebar-border/50">
-                                        <input
-                                            type="checkbox"
-                                            id={`mapel-${mapel.id}`}
-                                            className="rounded border-input text-primary shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50"
-                                            checked={data.mata_pelajaran_ids.includes(mapel.id)}
-                                            onChange={() => handleMataPelajaranToggle(mapel.id)}
-                                        />
-                                        <Label htmlFor={`mapel-${mapel.id}`} className="text-xs cursor-pointer font-normal">
-                                            {mapel.nama_mapel} ({mapel.kategori})
-                                        </Label>
-                                    </div>
-                                ))}
-                                {filteredMapel.length === 0 && (
-                                    <p className="text-center text-xs text-muted-foreground py-3">Tidak ada mata pelajaran ditemukan</p>
-                                )}
-                            </div>
-                            {errors.mata_pelajaran_ids && (
-                                <p className="text-xs text-destructive">
-                                    {errors.mata_pelajaran_ids}
                                 </p>
                             )}
                         </div>
@@ -631,15 +415,19 @@ return;
                             </Button>
                             <Button
                                 type="submit"
-                                disabled={processing || (data.nip.length > 0 && data.nip.length !== 18)}
+                                disabled={processing}
                                 className="flex-1"
                             >
                                 {processing ? (
                                     'Proses...'
                                 ) : editingGuru ? (
-                                    <><Save className="mr-2 h-4 w-4" /> Update</>
+                                    <>
+                                        <Save className="mr-2 h-4 w-4" /> Update
+                                    </>
                                 ) : (
-                                    <><Plus className="mr-2 h-4 w-4" /> Simpan</>
+                                    <>
+                                        <Plus className="mr-2 h-4 w-4" /> Simpan
+                                    </>
                                 )}
                             </Button>
                         </div>
@@ -649,12 +437,10 @@ return;
 
             <AlertDialog open={deletingGuruId !== null} onOpenChange={(open) => !open && setDeletingGuruId(null)}>
                 <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Konfirmasi Hapus</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Apakah Anda yakin ingin menghapus data guru ini? Semua data presensi terkait juga akan terhapus.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
+                    <AlertDialogTitle>Konfirmasi Hapus</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Apakah Anda yakin ingin menghapus data guru ini? Semua data presensi terkait juga akan terhapus.
+                    </AlertDialogDescription>
                     <AlertDialogFooter>
                         <AlertDialogCancel>Batal</AlertDialogCancel>
                         <AlertDialogAction onClick={executeDelete}>Hapus</AlertDialogAction>

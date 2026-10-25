@@ -34,19 +34,32 @@ interface Kelas {
     id: number;
     nama_kelas: string | null;
     full_nama_kelas: string;
-    jurusan?: {
-        singkatan: string;
-    } | null;
-    jenjangKelas?: {
-        nama_jenjang: string;
-    } | null;
 }
 
 interface Siswa {
     id: number;
     nis: string;
+    nisn?: string | null;
+    nik?: string | null;
     nama: string;
+    nama_panggilan?: string | null;
     jenis_kelamin?: 'laki-laki' | 'perempuan' | null;
+    tempat_lahir?: string | null;
+    tanggal_lahir?: string | null;
+    agama?: string | null;
+    tanggal_masuk?: string | null;
+    nama_ayah?: string | null;
+    pekerjaan_ayah?: string | null;
+    nama_ibu?: string | null;
+    pekerjaan_ibu?: string | null;
+    no_hp?: string | null;
+    anak_ke?: string | null;
+    nama_jalan?: string | null;
+    desa?: string | null;
+    kecamatan?: string | null;
+    kabupaten_kota?: string | null;
+    provinsi?: string | null;
+    kode_pos?: string | null;
     foto_url?: string | null;
     kelas_id: number;
     kelas?: Kelas;
@@ -77,6 +90,7 @@ export default function SiswaIndex({
     const [deletingSiswaId, setDeletingSiswaId] = useState<number | null>(null);
     const [resettingPasswordSiswaId, setResettingPasswordSiswaId] = useState<number | null>(null);
     const [showForm, setShowForm] = useState(false);
+    const [activeTab, setActiveTab] = useState('pribadi');
 
     useAutoRefresh(true, 5000);
 
@@ -91,8 +105,27 @@ export default function SiswaIndex({
 
     const { data, setData, post, put, processing, errors, reset, clearErrors } = useForm({
         nis: '',
+        nisn: '',
+        nik: '',
         nama: '',
+        nama_panggilan: '',
         jenis_kelamin: '',
+        tempat_lahir: '',
+        tanggal_lahir: '',
+        agama: '',
+        tanggal_masuk: '',
+        nama_ayah: '',
+        pekerjaan_ayah: '',
+        nama_ibu: '',
+        pekerjaan_ibu: '',
+        no_hp: '',
+        anak_ke: '',
+        nama_jalan: '',
+        desa: '',
+        kecamatan: '',
+        kabupaten_kota: '',
+        provinsi: '',
+        kode_pos: '',
         kelas_id: '',
         password: '',
         foto: null as string | File | null,
@@ -108,6 +141,7 @@ export default function SiswaIndex({
         reset();
         clearErrors();
         setEditingSiswa(null);
+        setActiveTab('pribadi');
         setShowForm(true);
     };
 
@@ -156,13 +190,33 @@ export default function SiswaIndex({
         clearErrors();
         setData({
             nis: siswa.nis,
+            nisn: siswa.nisn ?? '',
+            nik: siswa.nik ?? '',
             nama: siswa.nama,
+            nama_panggilan: siswa.nama_panggilan ?? '',
             jenis_kelamin: siswa.jenis_kelamin ?? '',
+            tempat_lahir: siswa.tempat_lahir ?? '',
+            tanggal_lahir: siswa.tanggal_lahir ?? '',
+            agama: siswa.agama ?? '',
+            tanggal_masuk: siswa.tanggal_masuk ?? '',
+            nama_ayah: siswa.nama_ayah ?? '',
+            pekerjaan_ayah: siswa.pekerjaan_ayah ?? '',
+            nama_ibu: siswa.nama_ibu ?? '',
+            pekerjaan_ibu: siswa.pekerjaan_ibu ?? '',
+            no_hp: siswa.no_hp ?? '',
+            anak_ke: siswa.anak_ke ?? '',
+            nama_jalan: siswa.nama_jalan ?? '',
+            desa: siswa.desa ?? '',
+            kecamatan: siswa.kecamatan ?? '',
+            kabupaten_kota: siswa.kabupaten_kota ?? '',
+            provinsi: siswa.provinsi ?? '',
+            kode_pos: siswa.kode_pos ?? '',
             kelas_id: siswa.kelas_id.toString(),
             password: '',
             foto: siswa.foto_url ?? null,
             remove_foto: false,
         });
+        setActiveTab('pribadi');
         setShowForm(true);
     };
 
@@ -175,8 +229,8 @@ export default function SiswaIndex({
 
     const executeDelete = () => {
         if (!deletingSiswaId) {
-return;
-}
+            return;
+        }
 
         router.delete(adminSiswa.destroy.url({ siswa: deletingSiswaId }), {
             preserveScroll: true,
@@ -191,8 +245,8 @@ return;
 
     const executeResetPassword = () => {
         if (!resettingPasswordSiswaId) {
-return;
-}
+            return;
+        }
 
         router.post(adminSiswa.resetPassword.url({ siswa: resettingPasswordSiswaId }), {}, {
             preserveScroll: true,
@@ -222,7 +276,7 @@ return;
                         <Button onClick={handleOpenCreate} className="bg-white text-black border border-zinc-200 shadow-xs hover:bg-zinc-50 dark:bg-white dark:text-black dark:border-zinc-200 dark:hover:bg-zinc-100">
                             <Plus className="mr-2 h-4 w-4" /> Tambah
                         </Button>
-                        <CsvImport entity="siswa" title="Impor Siswa" description="Header: nis, nama, jenis_kelamin, kelas" />
+                        <CsvImport entity="siswa" title="Impor Siswa" description="Header: nis, nisn, nik, nama, nama_panggilan, jenis_kelamin, tempat_lahir, tanggal_lahir, agama, tanggal_masuk, nama_ayah, pekerjaan_ayah, nama_ibu, pekerjaan_ibu, no_hp, anak_ke, nama_jalan, desa, kecamatan, kabupaten_kota, provinsi, kode_pos, kelas" />
                     </div>
                 </div>
 
@@ -245,13 +299,16 @@ return;
                                             NIS
                                         </th>
                                         <th scope="col" className="px-3 py-2.5">
-                                            Nama Siswa
+                                            Nama Lengkap (Panggilan)
+                                        </th>
+                                        <th scope="col" className="px-3 py-2.5">
+                                            NISN
                                         </th>
                                         <th scope="col" className="px-3 py-2.5">
                                             Kelas
                                         </th>
                                         <th scope="col" className="px-3 py-2.5">
-                                            Status Kata Sandi
+                                            Jenis Kelamin
                                         </th>
                                         <th
                                             scope="col"
@@ -278,22 +335,20 @@ return;
                                                             {siswa.nama.slice(0, 2).toUpperCase()}
                                                         </AvatarFallback>
                                                     </Avatar>
-                                                    <span>{siswa.nama}</span>
+                                                    <span className="font-medium">{siswa.nama}</span>
+                                                    {siswa.nama_panggilan && (
+                                                        <span className="text-[10px] text-muted-foreground italic">({siswa.nama_panggilan})</span>
+                                                    )}
                                                 </div>
                                             </td>
                                             <td className="px-3 py-2.5 text-muted-foreground text-xs">
-                                                {siswa.kelas?.full_nama_kelas}
+                                                {siswa.nisn || '-'}
                                             </td>
-                                            <td className="px-3 py-2.5">
-                                                {siswa.user?.password_default ? (
-                                                    <span className="inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
-                                                        Default
-                                                    </span>
-                                                ) : (
-                                                    <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">
-                                                        Sudah Diubah
-                                                    </span>
-                                                )}
+                                            <td className="px-3 py-2.5 text-muted-foreground text-xs">
+                                                {siswa.kelas?.full_nama_kelas || '-'}
+                                            </td>
+                                            <td className="px-3 py-2.5 text-muted-foreground text-xs">
+                                                {siswa.jenis_kelamin === 'laki-laki' ? 'Laki-laki' : siswa.jenis_kelamin === 'perempuan' ? 'Perempuan' : '-'}
                                             </td>
                                             <td className="px-3 py-2.5 text-right">
                                                 <div className="flex justify-end gap-2">
@@ -340,7 +395,7 @@ return;
                                     {siswas.data.length === 0 && (
                                         <tr>
                                             <td
-                                                colSpan={5}
+                                                colSpan={6}
                                                 className="px-3 py-10 text-center text-muted-foreground"
                                             >
                                                 <div className="flex flex-col items-center gap-2">
@@ -359,164 +414,542 @@ return;
             </div>
 
             <Dialog open={showForm} onOpenChange={setShowForm}>
-                <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
+                <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>{editingSiswa ? 'Edit Siswa' : 'Tambah Siswa'}</DialogTitle>
-                        <DialogDescription>Kelola data siswa</DialogDescription>
+                        <DialogDescription>Kelola data siswa lengkap sesuai PAUD</DialogDescription>
                     </DialogHeader>
-                    <form onSubmit={submit} className="space-y-4">
-                        <div className="space-y-2">
-                            <Label>Foto Profil</Label>
-                            <PhotoUpload
-                                value={data.foto}
-                                onChange={handleFotoChange}
-                                fallback={data.nama || 'Siswa'}
-                            />
-                            {errors.foto && (
-                                <p className="text-xs text-destructive">
-                                    {errors.foto}
-                                </p>
-                            )}
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label htmlFor="nis">NIS</Label>
-                            <Input
-                                id="nis"
-                                value={data.nis}
-                                onChange={(e) => {
-                                    const digits = e.target.value.replace(/[^0-9]/g, '').slice(0, 8);
-                                    const formatted = digits.length > 2
-                                        ? `${digits.slice(0, 2)}.${digits.slice(2)}`
-                                        : digits;
-                                    setData('nis', formatted);
-                                }}
-                                placeholder="Format: XX.XXXXXX (misal 24.012505)"
-                                maxLength={9}
-                                className={`bg-muted/30 ${data.nis.length > 0 && !/^[0-9]{2}\.[0-9]{6}$/.test(data.nis) ? 'border-destructive focus-visible:ring-destructive' : ''}`}
-                            />
-                            {data.nis.length > 0 && !/^[0-9]{2}\.[0-9]{6}$/.test(data.nis) && (
-                                <p className="text-[11px] text-destructive">
-                                    Format NIS: 2 digit + titik + 6 digit (contoh: 24.012505)
-                                </p>
-                            )}
-                            {errors.nis && (
-                                <p className="text-xs text-destructive">
-                                    {errors.nis}
-                                </p>
-                            )}
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label htmlFor="nama">Nama Lengkap</Label>
-                            <Input
-                                id="nama"
-                                value={data.nama}
-                                onChange={(e) =>
-                                    setData('nama', e.target.value)
-                                }
-                                placeholder="Nama Siswa"
-                                className="bg-muted/30"
-                            />
-                            {errors.nama && (
-                                <p className="text-xs text-destructive">
-                                    {errors.nama}
-                                </p>
-                            )}
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label htmlFor="jenis_kelamin">Jenis Kelamin</Label>
-                            <select
-                                id="jenis_kelamin"
-                                className="flex h-9 w-full rounded-md border border-input bg-muted/30 px-3 py-1 text-xs shadow-sm transition-colors focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none sm:text-sm"
-                                value={data.jenis_kelamin}
-                                onChange={(e) =>
-                                    setData('jenis_kelamin', e.target.value)
-                                }
-                            >
-                                <option value="">Pilih Jenis Kelamin</option>
-                                <option value="laki-laki">Laki-laki</option>
-                                <option value="perempuan">Perempuan</option>
-                            </select>
-                            {errors.jenis_kelamin && (
-                                <p className="text-xs text-destructive">
-                                    {errors.jenis_kelamin}
-                                </p>
-                            )}
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label htmlFor="kelas_id">Kelas</Label>
-                            <select
-                                id="kelas_id"
-                                className="flex h-9 w-full rounded-md border border-input bg-muted/30 px-3 py-1 text-xs shadow-sm transition-colors focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none sm:text-sm"
-                                value={data.kelas_id}
-                                onChange={(e) =>
-                                    setData('kelas_id', e.target.value)
-                                }
-                            >
-                                <option value="">Pilih Kelas</option>
-                                {kelasList.map((k) => (
-                                    <option key={k.id} value={k.id}>
-                                        {k.full_nama_kelas}
-                                    </option>
-                                ))}
-                            </select>
-                            {errors.kelas_id && (
-                                <p className="text-xs text-destructive">
-                                    {errors.kelas_id}
-                                </p>
-                            )}
-                        </div>
-
-                        {editingSiswa && (
-                            <div className="space-y-2 pt-2 border-t border-sidebar-border mt-4">
-                                <Label htmlFor="password">
-                                    Kata Sandi Baru (Opsional)
-                                </Label>
-                                <Input
-                                    id="password"
-                                    type="password"
-                                    value={data.password}
-                                    onChange={(e) =>
-                                        setData('password', e.target.value)
-                                    }
-                                    placeholder="Minimal 8 karakter, kosongkan jika tidak diubah"
-                                    className="bg-muted/30"
-                                />
-                                {errors.password && (
-                                    <p className="text-xs text-destructive">
-                                        {errors.password}
-                                    </p>
-                                )}
-                            </div>
-                        )}
-
-                        <div className="flex gap-2 pt-2">
+                    <div className="space-y-4">
+                        <div className="flex gap-2">
                             <Button
                                 type="button"
-                                variant="outline"
-                                onClick={handleCancel}
-                                className="flex-1"
+                                onClick={() => setActiveTab('pribadi')}
+                                className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'pribadi' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}
                             >
-                                Batal
+                                Data Pribadi
                             </Button>
                             <Button
-                                type="submit"
-                                disabled={processing}
-                                className="flex-1"
+                                type="button"
+                                onClick={() => setActiveTab('ortu')}
+                                className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'ortu' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}
                             >
-                                {processing ? (
-                                    'Proses...'
-                                ) : editingSiswa ? (
-                                    <><Save className="mr-2 h-4 w-4" /> Update</>
-                                ) : (
-                                    <><Plus className="mr-2 h-4 w-4" /> Simpan</>
-                                )}
+                                Orang Tua & Alamat
                             </Button>
                         </div>
-                    </form>
+
+                        <form onSubmit={submit} className="space-y-4">
+                            {activeTab === 'pribadi' && (
+                                <>
+                                    <div className="space-y-2">
+                                        <Label>Foto Profil</Label>
+                                        <PhotoUpload
+                                            value={data.foto}
+                                            onChange={handleFotoChange}
+                                            fallback={data.nama || 'Siswa'}
+                                        />
+                                        {errors.foto && (
+                                            <p className="text-xs text-destructive">
+                                                {errors.foto}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="nis">NIS</Label>
+                                            <Input
+                                                id="nis"
+                                                value={data.nis}
+                                                onChange={(e) => {
+                                                    const digits = e.target.value.replace(/[^0-9]/g, '').slice(0, 8);
+                                                    const formatted = digits.length > 2
+                                                        ? `${digits.slice(0, 2)}.${digits.slice(2)}`
+                                                        : digits;
+                                                    setData('nis', formatted);
+                                                }}
+                                                placeholder="Format: XX.XXXXXX (misal 24.012505)"
+                                                maxLength={9}
+                                                className={`bg-muted/30 ${data.nis.length > 0 && !/^[0-9]{2}\.[0-9]{6}$/.test(data.nis) ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                                            />
+                                            {data.nis.length > 0 && !/^[0-9]{2}\.[0-9]{6}$/.test(data.nis) && (
+                                                <p className="text-[11px] text-destructive">
+                                                    Format NIS: 2 digit + titik + 6 digit (contoh: 24.012505)
+                                                </p>
+                                            )}
+                                            {errors.nis && (
+                                                <p className="text-xs text-destructive">
+                                                    {errors.nis}
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="nisn">NISN</Label>
+                                            <Input
+                                                id="nisn"
+                                                value={data.nisn}
+                                                onChange={(e) => setData('nisn', e.target.value)}
+                                                placeholder="Nomor Induk Siswa Nasional"
+                                                className="bg-muted/30"
+                                            />
+                                            {errors.nisn && (
+                                                <p className="text-xs text-destructive">
+                                                    {errors.nisn}
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="nik">NIK</Label>
+                                            <Input
+                                                id="nik"
+                                                value={data.nik}
+                                                onChange={(e) => setData('nik', e.target.value)}
+                                                placeholder="Nomor Induk Kependudukan"
+                                                className="bg-muted/30"
+                                            />
+                                            {errors.nik && (
+                                                <p className="text-xs text-destructive">
+                                                    {errors.nik}
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="nama">Nama Lengkap</Label>
+                                            <Input
+                                                id="nama"
+                                                value={data.nama}
+                                                onChange={(e) =>
+                                                    setData('nama', e.target.value)
+                                                }
+                                                placeholder="Nama Siswa Lengkap"
+                                                className="bg-muted/30"
+                                            />
+                                            {errors.nama && (
+                                                <p className="text-xs text-destructive">
+                                                    {errors.nama}
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="nama_panggilan">Nama Panggilan</Label>
+                                            <Input
+                                                id="nama_panggilan"
+                                                value={data.nama_panggilan}
+                                                onChange={(e) =>
+                                                    setData('nama_panggilan', e.target.value)
+                                                }
+                                                placeholder="Nama Panggilan"
+                                                className="bg-muted/30"
+                                            />
+                                            {errors.nama_panggilan && (
+                                                <p className="text-xs text-destructive">
+                                                    {errors.nama_panggilan}
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="jenis_kelamin">Jenis Kelamin</Label>
+                                            <select
+                                                id="jenis_kelamin"
+                                                className="flex h-9 w-full rounded-md border border-input bg-muted/30 px-3 py-1 text-xs shadow-sm transition-colors focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none sm:text-sm"
+                                                value={data.jenis_kelamin}
+                                                onChange={(e) =>
+                                                    setData('jenis_kelamin', e.target.value)
+                                                }
+                                            >
+                                                <option value="">Pilih Jenis Kelamin</option>
+                                                <option value="laki-laki">Laki-laki</option>
+                                                <option value="perempuan">Perempuan</option>
+                                            </select>
+                                            {errors.jenis_kelamin && (
+                                                <p className="text-xs text-destructive">
+                                                    {errors.jenis_kelamin}
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="tempat_lahir">Tempat Lahir</Label>
+                                            <Input
+                                                id="tempat_lahir"
+                                                value={data.tempat_lahir}
+                                                onChange={(e) =>
+                                                    setData('tempat_lahir', e.target.value)
+                                                }
+                                                placeholder="Tempat Lahir"
+                                                className="bg-muted/30"
+                                            />
+                                            {errors.tempat_lahir && (
+                                                <p className="text-xs text-destructive">
+                                                    {errors.tempat_lahir}
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="tanggal_lahir">Tanggal Lahir</Label>
+                                            <Input
+                                                type="date"
+                                                id="tanggal_lahir"
+                                                value={data.tanggal_lahir}
+                                                onChange={(e) =>
+                                                    setData('tanggal_lahir', e.target.value)
+                                                }
+                                                className="bg-muted/30"
+                                            />
+                                            {errors.tanggal_lahir && (
+                                                <p className="text-xs text-destructive">
+                                                    {errors.tanggal_lahir}
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="agama">Agama</Label>
+                                            <select
+                                                id="agama"
+                                                className="flex h-9 w-full rounded-md border border-input bg-muted/30 px-3 py-1 text-xs shadow-sm transition-colors focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none sm:text-sm"
+                                                value={data.agama}
+                                                onChange={(e) => setData('agama', e.target.value)}
+                                            >
+                                                <option value="">Pilih Agama</option>
+                                                <option value="Islam">Islam</option>
+                                                <option value="Kristen">Kristen</option>
+                                                <option value="Katolik">Katolik</option>
+                                                <option value="Hindu">Hindu</option>
+                                                <option value="Buddha">Buddha</option>
+                                                <option value="Konghucu">Konghucu</option>
+                                            </select>
+                                            {errors.agama && (
+                                                <p className="text-xs text-destructive">
+                                                    {errors.agama}
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="tanggal_masuk">Tanggal Masuk</Label>
+                                            <Input
+                                                type="date"
+                                                id="tanggal_masuk"
+                                                value={data.tanggal_masuk}
+                                                onChange={(e) =>
+                                                    setData('tanggal_masuk', e.target.value)
+                                                }
+                                                className="bg-muted/30"
+                                            />
+                                            {errors.tanggal_masuk && (
+                                                <p className="text-xs text-destructive">
+                                                    {errors.tanggal_masuk}
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="kelas_id">Kelas</Label>
+                                            <select
+                                                id="kelas_id"
+                                                className="flex h-9 w-full rounded-md border border-input bg-muted/30 px-3 py-1 text-xs shadow-sm transition-colors focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none sm:text-sm"
+                                                value={data.kelas_id}
+                                                onChange={(e) =>
+                                                    setData('kelas_id', e.target.value)
+                                                }
+                                            >
+                                                <option value="">Pilih Kelas</option>
+                                                {kelasList.map((k) => (
+                                                    <option key={k.id} value={k.id}>
+                                                        {k.full_nama_kelas}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            {errors.kelas_id && (
+                                                <p className="text-xs text-destructive">
+                                                    {errors.kelas_id}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {editingSiswa && (
+                                        <div className="space-y-2 pt-2 border-t border-sidebar-border mt-4">
+                                            <Label htmlFor="password">
+                                                Kata Sandi Baru (Opsional)
+                                            </Label>
+                                            <Input
+                                                id="password"
+                                                type="password"
+                                                value={data.password}
+                                                onChange={(e) =>
+                                                    setData('password', e.target.value)
+                                                }
+                                                placeholder="Minimal 8 karakter, kosongkan jika tidak diubah"
+                                                className="bg-muted/30"
+                                            />
+                                            {errors.password && (
+                                                <p className="text-xs text-destructive">
+                                                    {errors.password}
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
+                                </>
+                            )}
+
+                            {activeTab === 'ortu' && (
+                                <>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="nama_ayah">Nama Ayah</Label>
+                                            <Input
+                                                id="nama_ayah"
+                                                value={data.nama_ayah}
+                                                onChange={(e) =>
+                                                    setData('nama_ayah', e.target.value)
+                                                }
+                                                placeholder="Nama Ayah"
+                                                className="bg-muted/30"
+                                            />
+                                            {errors.nama_ayah && (
+                                                <p className="text-xs text-destructive">
+                                                    {errors.nama_ayah}
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="pekerjaan_ayah">Pekerjaan Ayah</Label>
+                                            <Input
+                                                id="pekerjaan_ayah"
+                                                value={data.pekerjaan_ayah}
+                                                onChange={(e) =>
+                                                    setData('pekerjaan_ayah', e.target.value)
+                                                }
+                                                placeholder="Pekerjaan Ayah"
+                                                className="bg-muted/30"
+                                            />
+                                            {errors.pekerjaan_ayah && (
+                                                <p className="text-xs text-destructive">
+                                                    {errors.pekerjaan_ayah}
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="nama_ibu">Nama Ibu</Label>
+                                            <Input
+                                                id="nama_ibu"
+                                                value={data.nama_ibu}
+                                                onChange={(e) =>
+                                                    setData('nama_ibu', e.target.value)
+                                                }
+                                                placeholder="Nama Ibu"
+                                                className="bg-muted/30"
+                                            />
+                                            {errors.nama_ibu && (
+                                                <p className="text-xs text-destructive">
+                                                    {errors.nama_ibu}
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="pekerjaan_ibu">Pekerjaan Ibu</Label>
+                                            <Input
+                                                id="pekerjaan_ibu"
+                                                value={data.pekerjaan_ibu}
+                                                onChange={(e) =>
+                                                    setData('pekerjaan_ibu', e.target.value)
+                                                }
+                                                placeholder="Pekerjaan Ibu"
+                                                className="bg-muted/30"
+                                            />
+                                            {errors.pekerjaan_ibu && (
+                                                <p className="text-xs text-destructive">
+                                                    {errors.pekerjaan_ibu}
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="no_hp">No. HP Orang Tua</Label>
+                                            <Input
+                                                id="no_hp"
+                                                value={data.no_hp}
+                                                onChange={(e) =>
+                                                    setData('no_hp', e.target.value)
+                                                }
+                                                placeholder="Nomor HP"
+                                                className="bg-muted/30"
+                                            />
+                                            {errors.no_hp && (
+                                                <p className="text-xs text-destructive">
+                                                    {errors.no_hp}
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="anak_ke">Anak ke-</Label>
+                                            <Input
+                                                id="anak_ke"
+                                                value={data.anak_ke}
+                                                onChange={(e) =>
+                                                    setData('anak_ke', e.target.value)
+                                                }
+                                                placeholder="Anak ke-"
+                                                className="bg-muted/30"
+                                            />
+                                            {errors.anak_ke && (
+                                                <p className="text-xs text-destructive">
+                                                    {errors.anak_ke}
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="nama_jalan">Nama Jalan</Label>
+                                            <Input
+                                                id="nama_jalan"
+                                                value={data.nama_jalan}
+                                                onChange={(e) =>
+                                                    setData('nama_jalan', e.target.value)
+                                                }
+                                                placeholder="Nama Jalan"
+                                                className="bg-muted/30"
+                                            />
+                                            {errors.nama_jalan && (
+                                                <p className="text-xs text-destructive">
+                                                    {errors.nama_jalan}
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="desa">Desa / Kelurahan</Label>
+                                            <Input
+                                                id="desa"
+                                                value={data.desa}
+                                                onChange={(e) =>
+                                                    setData('desa', e.target.value)
+                                                }
+                                                placeholder="Desa / Kelurahan"
+                                                className="bg-muted/30"
+                                            />
+                                            {errors.desa && (
+                                                <p className="text-xs text-destructive">
+                                                    {errors.desa}
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="kecamatan">Kecamatan</Label>
+                                            <Input
+                                                id="kecamatan"
+                                                value={data.kecamatan}
+                                                onChange={(e) =>
+                                                    setData('kecamatan', e.target.value)
+                                                }
+                                                placeholder="Kecamatan"
+                                                className="bg-muted/30"
+                                            />
+                                            {errors.kecamatan && (
+                                                <p className="text-xs text-destructive">
+                                                    {errors.kecamatan}
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="kabupaten_kota">Kabupaten / Kota</Label>
+                                            <Input
+                                                id="kabupaten_kota"
+                                                value={data.kabupaten_kota}
+                                                onChange={(e) =>
+                                                    setData('kabupaten_kota', e.target.value)
+                                                }
+                                                placeholder="Kabupaten / Kota"
+                                                className="bg-muted/30"
+                                            />
+                                            {errors.kabupaten_kota && (
+                                                <p className="text-xs text-destructive">
+                                                    {errors.kabupaten_kota}
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="provinsi">Provinsi</Label>
+                                            <Input
+                                                id="provinsi"
+                                                value={data.provinsi}
+                                                onChange={(e) =>
+                                                    setData('provinsi', e.target.value)
+                                                }
+                                                placeholder="Provinsi"
+                                                className="bg-muted/30"
+                                            />
+                                            {errors.provinsi && (
+                                                <p className="text-xs text-destructive">
+                                                    {errors.provinsi}
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="kode_pos">Kode Pos</Label>
+                                            <Input
+                                                id="kode_pos"
+                                                value={data.kode_pos}
+                                                onChange={(e) =>
+                                                    setData('kode_pos', e.target.value)
+                                                }
+                                                placeholder="Kode Pos"
+                                                className="bg-muted/30"
+                                            />
+                                            {errors.kode_pos && (
+                                                <p className="text-xs text-destructive">
+                                                    {errors.kode_pos}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+
+                            <div className="flex gap-2 pt-4">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={handleCancel}
+                                    className="flex-1"
+                                >
+                                    Batal
+                                </Button>
+                                <Button
+                                    type="submit"
+                                    disabled={processing}
+                                    className="flex-1"
+                                >
+                                    {processing ? (
+                                        'Proses...'
+                                    ) : editingSiswa ? (
+                                        <>
+                                            <Save className="mr-2 h-4 w-4" /> Update
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Plus className="mr-2 h-4 w-4" /> Simpan
+                                        </>
+                                    )}
+                                </Button>
+                            </div>
+                        </form>
+                    </div>
                 </DialogContent>
             </Dialog>
 

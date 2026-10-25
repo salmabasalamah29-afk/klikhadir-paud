@@ -5,9 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Absensi;
 use App\Models\Guru;
-use App\Models\Jurusan;
 use App\Models\Kelas;
-use App\Models\MataPelajaran;
 use App\Models\Siswa;
 use App\Models\TahunAjaran;
 use App\Models\User;
@@ -77,21 +75,12 @@ class DashboardController extends Controller
                 ->count(DB::raw('siswas.kelas_id'));
         }
 
-        // Students per Jurusan — hanya siswa aktif (kecualikan alumni, selaras dengan halaman data siswa)
-        $studentsPerJurusan = DB::table('siswas')
-            ->join('kelas', 'siswas.kelas_id', '=', 'kelas.id')
-            ->join('jurusans', 'kelas.jurusan_id', '=', 'jurusans.id')
-            ->where('siswas.is_alumni', false)
-            ->select('jurusans.singkatan', DB::raw('count(siswas.id) as count'))
-            ->groupBy('jurusans.id', 'jurusans.singkatan')
-            ->get();
-
         // Detailed Attendance Data (for stat detail dialog) - kosong jika tanggal di luar tahun aktif
         $detailStatus = $request->query('status');
 
         $detailedAttendance = [];
         if ($detailStatus && ! $isOutOfYear) {
-            $query = Absensi::with(['siswa.kelas.jurusan', 'mapel', 'guru'])
+            $query = Absensi::with(['siswa.kelas', 'guru'])
                 ->where('tanggal', $tanggal)
                 ->where('status', $detailStatus);
 
@@ -106,15 +95,24 @@ class DashboardController extends Controller
                         'nis' => $absensi->siswa->nis,
                         'nama' => $absensi->siswa->nama,
                     ],
-                    'kelas' => $absensi->siswa->kelas ?
-                        trim($absensi->siswa->kelas->tingkat.' '.
-                        ($absensi->siswa->kelas->jurusan ? $absensi->siswa->kelas->jurusan->singkatan : '').' '.
-                        $absensi->siswa->kelas->nama_kelas) : '-',
-                    'mapel' => $absensi->mapel ? $absensi->mapel->nama_mapel : '-',
+                    'kelas' => $absensi->siswa->kelas ? $absensi->siswa->kelas->nama_kelas : '-',
                     'guru' => $absensi->guru ? $absensi->guru->nama : '-',
                 ];
             });
         }
+
+        $studentsPerKelas = Siswa::where('siswas.is_alumni', false)
+            ->join('kelas', 'siswas.kelas_id', '=', 'kelas.id')
+            ->select('kelas.id', 'kelas.nama_kelas', DB::raw('count(siswas.id) as count'))
+            ->groupBy('kelas.id', 'kelas.nama_kelas')
+            ->get()
+            ->map(function ($row) {
+                return [
+                    'id' => $row->id,
+                    'nama_kelas' => $row->nama_kelas,
+                    'count' => (int) $row->count,
+                ];
+            });
 
         return Inertia::render('admin/dashboard', [
             'stats' => [
@@ -122,38 +120,26 @@ class DashboardController extends Controller
                 'total_siswa' => Siswa::where('is_alumni', false)->count(),
                 'total_guru' => Guru::count(),
                 'total_kelas' => Kelas::count(),
-                'total_jurusan' => Jurusan::count(),
-                'total_mata_pelajaran' => MataPelajaran::count(),
             ],
             'attendanceToday' => array_merge($attendanceStats, ['kelas' => $kelasSudahAbsen]),
-            'studentsPerJurusan' => $studentsPerJurusan,
             'filters' => [
                 'tanggal' => $tanggal,
             ],
             'activeYear' => $activeYear,
             'isOutOfYear' => $isOutOfYear,
             'detailedAttendance' => $detailedAttendance,
-            'gurus' => Guru::with(['mataPelajarans.kategoriPembelajaran', 'kelas.jurusan', 'kelas.jenjangKelas'])->orderBy('nama')->get()->map(function ($guru) {
+            'studentsPerKelas' => $studentsPerKelas,
+            'kelasList' => Kelas::orderBy('nama_kelas', 'asc')->get(),
+            'gurus' => Guru::with(['kelas'])->orderBy('nama')->get()->map(function ($guru) {
                 return [
                     'id' => $guru->id,
                     'nama' => $guru->nama,
                     'nip' => $guru->nip,
-                    'mapels' => $guru->mataPelajarans->map(function ($mapel) {
-                        return [
-                            'id' => $mapel->id,
-                            'nama_mapel' => $mapel->nama_mapel,
-                            'kategori' => $mapel->kategori,
-                        ];
-                    }),
                     'kelasList' => $guru->kelas->map(function ($kelas) {
                         return [
                             'id' => $kelas->id,
                             'nama_kelas' => $kelas->nama_kelas,
                             'full_nama_kelas' => $kelas->full_nama_kelas,
-                            'tingkat' => $kelas->jenjangKelas?->nama_jenjang,
-                            'jurusan' => $kelas->jurusan ? [
-                                'singkatan' => $kelas->jurusan->singkatan,
-                            ] : null,
                         ];
                     }),
                 ];

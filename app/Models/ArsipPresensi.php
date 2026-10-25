@@ -30,9 +30,4 @@ class ArsipPresensi extends Model
     {
         return $this->belongsTo(Guru::class);
     }
-
-    public function mapel(): BelongsTo
-    {
-        return $this->belongsTo(MataPelajaran::class, 'mapel_id');
-    }
 }
