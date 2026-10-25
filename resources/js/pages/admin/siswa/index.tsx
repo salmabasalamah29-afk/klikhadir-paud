@@ -77,6 +77,40 @@ interface PaginatedData<T> {
     }[];
 }
 
+function formatTanggalDisplay(value?: string | null): string {
+    if (!value) {
+        return '';
+    }
+
+    const match = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+
+    return match ? `${match[3]}/${match[2]}/${match[1]}` : value;
+}
+
+function formatTanggalInput(value: string): string {
+    const digits = value.replace(/\D/g, '').slice(0, 8);
+
+    if (digits.length <= 2) {
+        return digits;
+    }
+
+    if (digits.length <= 4) {
+        return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+    }
+
+    return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+}
+
+function tanggalToIso(value: string): string {
+    if (value.trim() === '') {
+        return '';
+    }
+
+    const match = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+
+    return match ? `${match[3]}-${match[2]}-${match[1]}` : value;
+}
+
 export default function SiswaIndex({
     siswas,
     kelasList,
@@ -103,8 +137,7 @@ export default function SiswaIndex({
     })() as string);
     const searchTimeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-    const { data, setData, post, put, processing, errors, reset, clearErrors } = useForm({
-        nis: '',
+    const { data, setData, post, put, processing, errors, reset, clearErrors, transform } = useForm({
         nisn: '',
         nik: '',
         nama: '',
@@ -160,6 +193,12 @@ export default function SiswaIndex({
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
 
+        transform((formData) => ({
+            ...formData,
+            tanggal_lahir: tanggalToIso(formData.tanggal_lahir),
+            tanggal_masuk: tanggalToIso(formData.tanggal_masuk),
+        }));
+
         if (editingSiswa) {
             put(adminSiswa.update.url({ siswa: editingSiswa.id }), {
                 preserveScroll: true,
@@ -189,16 +228,15 @@ export default function SiswaIndex({
         setEditingSiswa(siswa);
         clearErrors();
         setData({
-            nis: siswa.nis,
             nisn: siswa.nisn ?? '',
             nik: siswa.nik ?? '',
             nama: siswa.nama,
             nama_panggilan: siswa.nama_panggilan ?? '',
             jenis_kelamin: siswa.jenis_kelamin ?? '',
             tempat_lahir: siswa.tempat_lahir ?? '',
-            tanggal_lahir: siswa.tanggal_lahir ?? '',
+            tanggal_lahir: formatTanggalDisplay(siswa.tanggal_lahir),
             agama: siswa.agama ?? '',
-            tanggal_masuk: siswa.tanggal_masuk ?? '',
+            tanggal_masuk: formatTanggalDisplay(siswa.tanggal_masuk),
             nama_ayah: siswa.nama_ayah ?? '',
             pekerjaan_ayah: siswa.pekerjaan_ayah ?? '',
             nama_ibu: siswa.nama_ibu ?? '',
@@ -273,10 +311,10 @@ export default function SiswaIndex({
                         </p>
                     </div>
                     <div className="flex items-center gap-2">
-                        <Button onClick={handleOpenCreate} className="bg-white text-black border border-zinc-200 shadow-xs hover:bg-zinc-50 dark:bg-white dark:text-black dark:border-zinc-200 dark:hover:bg-zinc-100">
-                            <Plus className="mr-2 h-4 w-4" /> Tambah
+                        <Button onClick={handleOpenCreate} className="min-w-28 bg-white text-black border border-zinc-200 shadow-xs hover:bg-zinc-50 dark:bg-white dark:text-black dark:border-zinc-200 dark:hover:bg-zinc-100">
+                            <Plus className="h-4 w-4" /> Tambah
                         </Button>
-                        <CsvImport entity="siswa" title="Impor Siswa" description="Header: nis, nisn, nik, nama, nama_panggilan, jenis_kelamin, tempat_lahir, tanggal_lahir, agama, tanggal_masuk, nama_ayah, pekerjaan_ayah, nama_ibu, pekerjaan_ibu, no_hp, anak_ke, nama_jalan, desa, kecamatan, kabupaten_kota, provinsi, kode_pos, kelas" />
+                        <CsvImport entity="siswa" title="Impor Siswa" description="Header: nisn, nik, nama, nama_panggilan, jenis_kelamin, tempat_lahir, tanggal_lahir, agama, tanggal_masuk, kelas, nama_ayah, pekerjaan_ayah, nama_ibu, pekerjaan_ibu, no_hp, anak_ke, nama_jalan, desa, kecamatan, kabupaten_kota, provinsi, kode_pos" />
                     </div>
                 </div>
 
@@ -284,7 +322,7 @@ export default function SiswaIndex({
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
-                            placeholder="Cari NIS, nama, atau kelas"
+                            placeholder="Cari nama, NISN, atau kelas..."
                             value={search}
                             onChange={(e) => handleSearch(e.target.value)}
                             className="pl-9 bg-muted/30"
@@ -295,14 +333,11 @@ export default function SiswaIndex({
                             <table className="w-full text-left text-sm">
                                 <thead className="bg-muted/50 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
                                     <tr>
-                                        <th scope="col" className="px-3 py-2.5 w-[78px] text-center whitespace-nowrap">
-                                            NIS
-                                        </th>
-                                        <th scope="col" className="px-3 py-2.5">
-                                            Nama Lengkap (Panggilan)
-                                        </th>
-                                        <th scope="col" className="px-3 py-2.5">
+                                        <th scope="col" className="px-3 py-2.5 w-[110px] text-center whitespace-nowrap">
                                             NISN
+                                        </th>
+                                        <th scope="col" className="px-3 py-2.5">
+                                            Nama Lengkap
                                         </th>
                                         <th scope="col" className="px-3 py-2.5">
                                             Kelas
@@ -324,8 +359,8 @@ export default function SiswaIndex({
                                             key={siswa.id}
                                             className={`group transition-colors hover:bg-muted/30 ${editingSiswa?.id === siswa.id ? 'bg-primary/5' : ''}`}
                                         >
-                                            <td className="px-3 py-2.5 font-mono text-[11px] font-medium whitespace-nowrap tracking-tight text-center w-[78px]">
-                                                {siswa.nis}
+                                            <td className="px-3 py-2.5 font-mono text-[11px] font-medium whitespace-nowrap tracking-tight text-center w-[110px]">
+                                                {siswa.nisn || '-'}
                                             </td>
                                             <td className="px-3 py-2.5 font-medium text-foreground text-xs">
                                                 <div className="flex items-center gap-3">
@@ -335,14 +370,13 @@ export default function SiswaIndex({
                                                             {siswa.nama.slice(0, 2).toUpperCase()}
                                                         </AvatarFallback>
                                                     </Avatar>
-                                                    <span className="font-medium">{siswa.nama}</span>
-                                                    {siswa.nama_panggilan && (
-                                                        <span className="text-[10px] text-muted-foreground italic">({siswa.nama_panggilan})</span>
-                                                    )}
+                                                    <div className="flex flex-col leading-tight">
+                                                        <span className="font-medium">{siswa.nama}</span>
+                                                        {siswa.nama_panggilan && (
+                                                            <span className="text-xs text-muted-foreground">{siswa.nama_panggilan}</span>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                            </td>
-                                            <td className="px-3 py-2.5 text-muted-foreground text-xs">
-                                                {siswa.nisn || '-'}
                                             </td>
                                             <td className="px-3 py-2.5 text-muted-foreground text-xs">
                                                 {siswa.kelas?.full_nama_kelas || '-'}
@@ -395,7 +429,7 @@ export default function SiswaIndex({
                                     {siswas.data.length === 0 && (
                                         <tr>
                                             <td
-                                                colSpan={6}
+                                                colSpan={5}
                                                 className="px-3 py-10 text-center text-muted-foreground"
                                             >
                                                 <div className="flex flex-col items-center gap-2">
@@ -456,35 +490,7 @@ export default function SiswaIndex({
 
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div className="space-y-2">
-                                            <Label htmlFor="nis">NIS</Label>
-                                            <Input
-                                                id="nis"
-                                                value={data.nis}
-                                                onChange={(e) => {
-                                                    const digits = e.target.value.replace(/[^0-9]/g, '').slice(0, 8);
-                                                    const formatted = digits.length > 2
-                                                        ? `${digits.slice(0, 2)}.${digits.slice(2)}`
-                                                        : digits;
-                                                    setData('nis', formatted);
-                                                }}
-                                                placeholder="Format: XX.XXXXXX (misal 24.012505)"
-                                                maxLength={9}
-                                                className={`bg-muted/30 ${data.nis.length > 0 && !/^[0-9]{2}\.[0-9]{6}$/.test(data.nis) ? 'border-destructive focus-visible:ring-destructive' : ''}`}
-                                            />
-                                            {data.nis.length > 0 && !/^[0-9]{2}\.[0-9]{6}$/.test(data.nis) && (
-                                                <p className="text-[11px] text-destructive">
-                                                    Format NIS: 2 digit + titik + 6 digit (contoh: 24.012505)
-                                                </p>
-                                            )}
-                                            {errors.nis && (
-                                                <p className="text-xs text-destructive">
-                                                    {errors.nis}
-                                                </p>
-                                            )}
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <Label htmlFor="nisn">NISN</Label>
+                                            <Label htmlFor="nisn">NISN <span className="text-destructive">*</span></Label>
                                             <Input
                                                 id="nisn"
                                                 value={data.nisn}
@@ -593,12 +599,15 @@ export default function SiswaIndex({
                                         <div className="space-y-2">
                                             <Label htmlFor="tanggal_lahir">Tanggal Lahir</Label>
                                             <Input
-                                                type="date"
+                                                type="text"
+                                                inputMode="numeric"
                                                 id="tanggal_lahir"
                                                 value={data.tanggal_lahir}
                                                 onChange={(e) =>
-                                                    setData('tanggal_lahir', e.target.value)
+                                                    setData('tanggal_lahir', formatTanggalInput(e.target.value))
                                                 }
+                                                placeholder="dd/mm/yyyy"
+                                                maxLength={10}
                                                 className="bg-muted/30"
                                             />
                                             {errors.tanggal_lahir && (
@@ -634,12 +643,15 @@ export default function SiswaIndex({
                                         <div className="space-y-2">
                                             <Label htmlFor="tanggal_masuk">Tanggal Masuk</Label>
                                             <Input
-                                                type="date"
+                                                type="text"
+                                                inputMode="numeric"
                                                 id="tanggal_masuk"
                                                 value={data.tanggal_masuk}
                                                 onChange={(e) =>
-                                                    setData('tanggal_masuk', e.target.value)
+                                                    setData('tanggal_masuk', formatTanggalInput(e.target.value))
                                                 }
+                                                placeholder="dd/mm/yyyy"
+                                                maxLength={10}
                                                 className="bg-muted/30"
                                             />
                                             {errors.tanggal_masuk && (
@@ -939,7 +951,7 @@ export default function SiswaIndex({
                                         'Proses...'
                                     ) : editingSiswa ? (
                                         <>
-                                            <Save className="mr-2 h-4 w-4" /> Update
+                                            <Save className="mr-2 h-4 w-4" /> Perbarui
                                         </>
                                     ) : (
                                         <>

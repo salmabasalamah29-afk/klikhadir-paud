@@ -1,8 +1,6 @@
 <?php
 
 use App\Models\Guru;
-use App\Models\JenjangKelas;
-use App\Models\Jurusan;
 use App\Models\Kelas;
 use App\Models\Siswa;
 use App\Models\User;
@@ -14,9 +12,7 @@ uses(RefreshDatabase::class);
 function createSiswaProfile(array $extra = []): array
 {
     $kelas = Kelas::create([
-        'jurusan_id' => Jurusan::create(['nama_jurusan' => 'Aplikasi Perkantoran', 'singkatan' => 'AP'])->id,
-        'jenjang_kelas_id' => JenjangKelas::create(['nama_jenjang' => 'XI', 'urutan' => 11])->id,
-        'nama_kelas' => 'A',
+        'nama_kelas' => 'Kelompok A',
     ]);
 
     $user = User::factory()->create(array_merge(['role' => 'siswa', 'password_default' => false], $extra));
@@ -43,7 +39,7 @@ test('siswa can view his own profile page with kelas identity', function () {
             ->where('profil.nis', '24.012505')
             ->where('profil.nama', 'Velove Azalia Putri')
             ->where('profil.jenis_kelamin', 'perempuan')
-            ->where('profil.kelas.full_nama_kelas', 'XI AP A')
+            ->where('profil.kelas.full_nama_kelas', 'Kelompok A')
             ->has('profil.foto_url'));
 });
 
@@ -56,7 +52,7 @@ test('shared auth user of siswa exposes profile data and kelas identity', functi
             ->where('auth.user.role', 'siswa')
             ->where('auth.user.siswa.nis', '24.012505')
             ->where('auth.user.siswa.nama', 'Velove Azalia Putri')
-            ->where('auth.user.siswa.kelas.full_nama_kelas', 'XI AP A')
+            ->where('auth.user.siswa.kelas.full_nama_kelas', 'Kelompok A')
             ->has('auth.user.avatar'));
 });
 
@@ -64,7 +60,6 @@ test('guru role cannot access siswa profile page', function () {
     $user = User::factory()->create(['role' => 'guru', 'password_default' => false]);
     Guru::create([
         'user_id' => $user->id,
-        'nip' => '198501012010011001',
         'nama' => 'Ahmad Fauzi',
     ]);
 

@@ -181,7 +181,7 @@ class ExportPageController extends Controller
                 }
 
                 $html .= '<table border="1" cellspacing="0" cellpadding="10" style="border-collapse:collapse;width:100%;border:1px solid #000;">';
-                $html .= '<tr class="title-row"><td colspan="4">Guru: '.e($user->name).' (NIP: '.e($guru->nip ?? '-').')</td></tr>';
+                $html .= '<tr class="title-row"><td colspan="4">Guru: '.e($user->name).'</td></tr>';
                 $html .= '<thead><tr><th style="width:38px">No</th><th style="width:100px">Tanggal</th><th style="width:100px">Status</th><th style="min-width:200px">Keterangan</th></tr></thead><tbody>';
 
                 $no = 1;

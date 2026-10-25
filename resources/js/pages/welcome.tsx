@@ -60,7 +60,7 @@ export default function Welcome() {
                             <div className="grid gap-4">
                                 <div className="grid gap-1.5">
                                     <Label htmlFor="login" className="text-sm font-medium text-[#093ff9]">
-                                        NIP / NIS / Email
+                                        Username / NIS / Email
                                     </Label>
                                     <Input
                                         id="login"
@@ -70,7 +70,7 @@ export default function Welcome() {
                                         autoFocus
                                         tabIndex={1}
                                         autoComplete="username"
-                                        placeholder="Masukkan NIP / NIS / Email"
+                                        placeholder="Masukkan Username / NIS / Email"
                                         className="h-11 border-gray-300 bg-white text-gray-900 placeholder:text-gray-400 focus:border-[#093ff9] focus:ring-[#093ff9]/20"
                                     />
                                     <InputError message={errors.login} />

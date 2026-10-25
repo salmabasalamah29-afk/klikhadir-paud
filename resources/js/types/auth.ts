@@ -10,7 +10,6 @@ export type User = {
     role: 'admin' | 'guru' | 'siswa';
     guru?: {
         nama: string;
-        nip?: string;
         jenis_kelamin?: 'laki-laki' | 'perempuan' | null;
         foto_url?: string | null;
     } | null;

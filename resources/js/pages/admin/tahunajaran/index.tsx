@@ -176,7 +176,7 @@ export default function TahunAjaranIndex({
                         </p>
                     </div>
                     <div className="flex items-center gap-2">
-                        <Button onClick={handleOpenCreate} className="bg-white text-black border border-zinc-200 shadow-xs hover:bg-zinc-50 dark:bg-white dark:text-black dark:border-zinc-200 dark:hover:bg-zinc-100">
+                        <Button onClick={handleOpenCreate} className="min-w-28 bg-white text-black border border-zinc-200 shadow-xs hover:bg-zinc-50 dark:bg-white dark:text-black dark:border-zinc-200 dark:hover:bg-zinc-100">
                             <Plus className="h-4 w-4" /> Tambah
                         </Button>
                         <CsvImport entity="tahun-ajaran" title="Impor Tahun Ajaran" description="Header: tahun_awal, tahun_akhir" />
@@ -350,7 +350,7 @@ export default function TahunAjaranIndex({
                                     'Proses...'
                                 ) : editingTahun ? (
                                     <>
-                                        <Save className="mr-2 h-4 w-4" /> Update
+                                        <Save className="mr-2 h-4 w-4" /> Perbarui
                                     </>
                                 ) : (
                                     <>

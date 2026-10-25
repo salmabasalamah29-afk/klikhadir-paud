@@ -54,7 +54,6 @@ class FortifyServiceProvider extends ServiceProvider
 
             $user = User::whereRaw('LOWER(email) = ?', [$login])
                 ->orWhereRaw('LOWER(username) = ?', [$login])
-                ->orWhereHas('guru', fn ($q) => $q->where('nip', $rawLogin)->orWhereRaw('LOWER(nip) = ?', [$login]))
                 ->orWhereHas('siswa', fn ($q) => $q->where('nis', $rawLogin)->orWhereRaw('LOWER(nis) = ?', [$login]))
                 ->first();
 

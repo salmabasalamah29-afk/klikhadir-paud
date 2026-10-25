@@ -1,7 +1,5 @@
 <?php
 
-use App\Models\JenjangKelas;
-use App\Models\Jurusan;
 use App\Models\Kelas;
 use App\Models\Siswa;
 use App\Models\User;
@@ -14,12 +12,8 @@ beforeEach(function () {
     $admin = User::factory()->create(['role' => 'admin', 'password_default' => false]);
     $this->actingAs($admin);
 
-    $jenjang = JenjangKelas::create(['nama_jenjang' => 'X', 'urutan' => 1]);
-    $pplg = Jurusan::create(['nama_jurusan' => 'Pengembangan Perangkat Lunak dan Gim', 'singkatan' => 'PPLG']);
-    $dpib = Jurusan::create(['nama_jurusan' => 'Desain Pemodelan dan Informasi Bangunan', 'singkatan' => 'DPIB']);
-
-    $this->kelasPplg = Kelas::create(['jurusan_id' => $pplg->id, 'jenjang_kelas_id' => $jenjang->id, 'nama_kelas' => 'A']);
-    $this->kelasDpib = Kelas::create(['jurusan_id' => $dpib->id, 'jenjang_kelas_id' => $jenjang->id, 'nama_kelas' => 'A']);
+    $this->kelasA = Kelas::create(['nama_kelas' => 'Kelompok A']);
+    $this->kelasB = Kelas::create(['nama_kelas' => 'Kelompok B']);
 });
 
 function buatSiswaDiKelas(int $kelasId, string $nis, string $nama, bool $isAlumni = false): Siswa
@@ -33,21 +27,23 @@ function buatSiswaDiKelas(int $kelasId, string $nis, string $nama, bool $isAlumn
     ]);
 }
 
-test('dashboard total siswa dan distribusi per jurusan hanya menghitung siswa aktif', function () {
-    buatSiswaDiKelas($this->kelasPplg->id, '25.013001', 'Siswa PPLG Satu');
-    buatSiswaDiKelas($this->kelasPplg->id, '25.013002', 'Siswa PPLG Dua');
-    buatSiswaDiKelas($this->kelasDpib->id, '25.013003', 'Siswa DPIB Satu');
-    buatSiswaDiKelas($this->kelasPplg->id, '25.013004', 'Siswa Alumni', true);
+test('dashboard total siswa dan distribusi per kelas hanya menghitung siswa aktif', function () {
+    buatSiswaDiKelas($this->kelasA->id, '25.013001', 'Siswa A Satu');
+    buatSiswaDiKelas($this->kelasA->id, '25.013002', 'Siswa A Dua');
+    buatSiswaDiKelas($this->kelasB->id, '25.013003', 'Siswa B Satu');
+    buatSiswaDiKelas($this->kelasA->id, '25.013004', 'Siswa Alumni', true);
 
     $this->get(route('admin.dashboard'))
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('admin/dashboard')
             ->where('stats.total_siswa', 3)
-            ->where('studentsPerJurusan', function ($jurusans) {
-                $map = collect($jurusans)->pluck('count', 'singkatan')->all();
+            ->missing('attendanceToday.alpha')
+            ->missing('attendanceToday.dispensasi')
+            ->where('studentsPerKelas', function ($kelas) {
+                $map = collect($kelas)->pluck('count', 'nama_kelas')->all();
 
-                return ($map['PPLG'] ?? null) === 2 && ($map['DPIB'] ?? null) === 1;
+                return ($map['Kelompok A'] ?? null) === 2 && ($map['Kelompok B'] ?? null) === 1;
             })
         );
 });
@@ -58,16 +54,16 @@ test('dashboard total siswa bertambah saat tambah data dan berkurang saat hapus 
         ->assertInertia(fn (Assert $page) => $page->where('stats.total_siswa', 0));
 
     $this->post(route('admin.siswa.store'), [
-        'nis' => '25.013001',
+        'nisn' => '0012345678',
         'nama' => 'Siswa Baru',
-        'kelas_id' => $this->kelasPplg->id,
+        'kelas_id' => $this->kelasA->id,
     ])->assertRedirect();
 
     $this->get(route('admin.dashboard'))
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page->where('stats.total_siswa', 1));
 
-    $siswa = Siswa::where('nis', '25.013001')->firstOrFail();
+    $siswa = Siswa::where('nisn', '0012345678')->firstOrFail();
 
     $this->delete(route('admin.siswa.destroy', $siswa->id))->assertRedirect();
 

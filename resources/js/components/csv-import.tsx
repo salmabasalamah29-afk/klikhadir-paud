@@ -83,11 +83,11 @@ export default function CsvImport({ entity, title, description }: CsvImportProps
         });
     };
 
-    const headerText = description?.replace('Header: ', '') || entity;
+    const headerText = description?.replace(/^Header:\s*/, '') || entity;
     const headerDescription = description
-        ? entity === 'guru'
-            ? `Header harus persis: ${headerText}, pisah kolom dengan koma.`
-            : `Header harus persis: ${headerText}.`
+        ? description.startsWith('Header:')
+            ? `Header harus persis: ${headerText}.`
+            : description
         : `Impor data ${entity} via CSV.`;
 
     return (
@@ -99,7 +99,7 @@ export default function CsvImport({ entity, title, description }: CsvImportProps
             }}
         >
             <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2">
+                <Button variant="outline" className="min-w-28 gap-2">
                     <Upload className="h-4 w-4" /> Impor
                 </Button>
             </DialogTrigger>
@@ -143,9 +143,11 @@ export default function CsvImport({ entity, title, description }: CsvImportProps
                             </div>
                             <div className="flex min-w-0 flex-col">
                                 <span className="text-xs font-medium">Pilih File</span>
-                                <span className="truncate text-[11px] text-muted-foreground">
-                                    {file ? file.name : 'Belum ada file dipilih'}
-                                </span>
+                                {file && (
+                                    <span className="truncate text-[11px] text-muted-foreground">
+                                        {file.name}
+                                    </span>
+                                )}
                             </div>
                         </label>
                     </div>

@@ -22,63 +22,51 @@ test('guest is redirected to login on guru index', function () {
 
 test('admin can view guru list', function () {
     Guru::create([
-        'user_id' => User::factory()->create(['role' => 'guru', 'username' => '199009182014022003'])->id,
-        'nip' => '199009182014022003',
+        'user_id' => User::factory()->create(['role' => 'guru'])->id,
         'nama' => 'Arika Prihastanti',
     ]);
 
     $this->get(route('admin.guru.index'))->assertOk();
 });
 
-test('admin can create guru with valid NIP', function () {
+test('admin can create guru with required data', function () {
     $response = $this->post(route('admin.guru.store'), [
-        'nip' => '199009182014022001',
         'nama' => 'Budi Santoso, S.Pd',
         'jenis_kelamin' => 'laki-laki',
     ]);
 
     $response->assertRedirect();
 
-    $this->assertDatabaseHas('gurus', [
-        'nip' => '199009182014022001',
-        'nama' => 'Budi Santoso, S.Pd',
-        'jenis_kelamin' => 'laki-laki',
-    ]);
+    $guru = Guru::where('nama', 'Budi Santoso, S.Pd')->firstOrFail();
 
-    $guru = Guru::where('nip', '199009182014022001')->first();
+    expect($guru->jenis_kelamin)->toBe('laki-laki');
     expect($guru->user->password_default)->toBeTrue();
     expect($guru->user->role)->toBe('guru');
 });
 
-test('admin cannot create guru with invalid NIP format', function () {
+test('admin cannot create guru without nama', function () {
     $response = $this->post(route('admin.guru.store'), [
-        'nip' => '123',
-        'nama' => 'Budi Santoso, S.Pd',
+        'jenis_kelamin' => 'laki-laki',
     ]);
 
-    $response->assertSessionHasErrors(['nip']);
+    $response->assertSessionHasErrors(['nama']);
 });
 
-test('admin can update guru with unchanged NIP', function () {
+test('admin can update guru data', function () {
     $guru = Guru::create([
-        'user_id' => User::factory()->create(['role' => 'guru', 'username' => '199009182014022003'])->id,
-        'nip' => '199009182014022003',
+        'user_id' => User::factory()->create(['role' => 'guru'])->id,
         'nama' => 'Arika Prihastanti',
     ]);
 
     $response = $this->put(route('admin.guru.update', $guru->id), [
-        'nip' => '199009182014022003',
         'nama' => 'Arika Prihastanti Sutami, S.Pd',
         'jenis_kelamin' => 'perempuan',
-        'kelas_ids' => [],
-        'mata_pelajaran_ids' => [],
     ]);
 
     $response->assertRedirect();
 
     $this->assertDatabaseHas('gurus', [
         'id' => $guru->id,
-        'nip' => '199009182014022003',
         'nama' => 'Arika Prihastanti Sutami, S.Pd',
         'jenis_kelamin' => 'perempuan',
     ]);
@@ -86,16 +74,17 @@ test('admin can update guru with unchanged NIP', function () {
 
 test('admin can view guru profile', function () {
     $guru = Guru::create([
-        'user_id' => User::factory()->create(['role' => 'guru', 'username' => '199009182014022003'])->id,
-        'nip' => '199009182014022003',
+        'user_id' => User::factory()->create(['role' => 'guru'])->id,
         'nama' => 'Arika Prihastanti',
+        'jenis_kelamin' => 'perempuan',
     ]);
 
     $this->get(route('admin.guru.profil', $guru->id))
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('admin/guru/profil')
-            ->where('guru.nip', '199009182014022003')
+            ->where('guru.nama', 'Arika Prihastanti')
+            ->where('guru.jenis_kelamin', 'perempuan')
             ->has('guru.foto_url'));
 });
 
@@ -103,19 +92,15 @@ test('admin can create guru with an uploaded foto', function () {
     Storage::fake('public');
 
     $response = $this->post(route('admin.guru.store'), [
-        'nip' => '199009182014022001',
         'nama' => 'Budi Santoso, S.Pd',
         'jenis_kelamin' => 'laki-laki',
         'foto' => UploadedFile::fake()->image('foto.jpg')->size(500),
-        'kelas_ids' => [],
-        'mata_pelajaran_ids' => [],
     ]);
 
     $response->assertRedirect();
 
-    $this->assertDatabaseHas('gurus', ['nip' => '199009182014022001']);
+    $guru = Guru::where('nama', 'Budi Santoso, S.Pd')->firstOrFail();
 
-    $guru = Guru::where('nip', '199009182014022001')->first();
     $this->assertDatabaseHas('fotos', ['fotoable_id' => $guru->id]);
 
     Storage::disk('public')->assertExists($guru->foto->file_path);
@@ -126,8 +111,7 @@ test('admin can update guru with existing foto sent as URL string', function () 
     Storage::fake('public');
 
     $guru = Guru::create([
-        'user_id' => User::factory()->create(['role' => 'guru', 'username' => '199009182014022003'])->id,
-        'nip' => '199009182014022003',
+        'user_id' => User::factory()->create(['role' => 'guru'])->id,
         'nama' => 'Arika Prihastanti',
     ]);
 
@@ -141,13 +125,10 @@ test('admin can update guru with existing foto sent as URL string', function () 
     ]);
 
     $response = $this->put(route('admin.guru.update', $guru->id), [
-        'nip' => '199009182014022003',
         'nama' => 'Arika Prihastanti Sutami, S.Pd',
         'jenis_kelamin' => 'perempuan',
         'foto' => Storage::disk('public')->url($foto),
         'remove_foto' => false,
-        'kelas_ids' => [],
-        'mata_pelajaran_ids' => [],
     ]);
 
     $response->assertRedirect();
@@ -165,8 +146,7 @@ test('admin can update guru with existing foto sent as URL string', function () 
 
 test('admin can delete guru and its foto is removed', function () {
     $guru = Guru::create([
-        'user_id' => User::factory()->create(['role' => 'guru', 'username' => '199009182014022003'])->id,
-        'nip' => '199009182014022003',
+        'user_id' => User::factory()->create(['role' => 'guru'])->id,
         'nama' => 'Arika Prihastanti',
     ]);
 

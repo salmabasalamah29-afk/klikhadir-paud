@@ -367,7 +367,6 @@ class AttendanceExportController extends Controller
 
         $html .= '<table class="header-meta">';
         $html .= '<tr><td style="font-weight:bold;white-space:nowrap;width:90px">Nama Guru</td><td style="white-space:nowrap">: '.e($guru->nama).'</td></tr>';
-        $html .= '<tr><td style="font-weight:bold;white-space:nowrap">NIP</td><td style="white-space:nowrap">: '.e($guru->nip ?? '-').'</td></tr>';
         if ($startDate || $endDate) {
             $periode = ($startDate ?: '...').' s/d '.($endDate ?: '...');
             $html .= '<tr><td style="font-weight:bold;white-space:nowrap">Periode</td><td style="white-space:nowrap">: '.e($periode).'</td></tr>';

@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Guru;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 
@@ -21,8 +22,7 @@ class GuruController extends Controller
         $gurus = Guru::with(['user', 'foto'])
             ->when($search, function ($query, $search) {
                 $searchTrim = trim($search);
-                $query->whereLike('nama', "%{$searchTrim}%")
-                    ->orWhereLike('nip', "%{$searchTrim}%");
+                $query->whereLike('nama', "%{$searchTrim}%");
             })
             ->latest()
             ->paginate(11)
@@ -56,7 +56,7 @@ class GuruController extends Controller
             'foto.max' => 'Ukuran foto maksimal 5 MB.',
         ]);
 
-        $username = strtolower(str_replace(' ', '', $validated['nama']));
+        $username = $this->generateUsername($validated['nama']);
 
         DB::transaction(function () use ($request, $validated, $username) {
             $user = User::create([
@@ -69,7 +69,6 @@ class GuruController extends Controller
 
             $guru = Guru::create([
                 'user_id' => $user->id,
-                'nip' => $username,
                 'nama' => $validated['nama'],
                 'jenis_kelamin' => $validated['jenis_kelamin'] ?? null,
             ]);
@@ -131,5 +130,18 @@ class GuruController extends Controller
         $guru->user->delete();
 
         return redirect()->back();
+    }
+
+    private function generateUsername(string $nama): string
+    {
+        $baseUsername = strtolower(str_replace(' ', '', $nama));
+        $username = $baseUsername;
+        $counter = 1;
+
+        while (User::where('username', $username)->exists()) {
+            $username = $baseUsername.$counter++;
+        }
+
+        return $username;
     }
 }

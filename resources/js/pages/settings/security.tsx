@@ -58,7 +58,7 @@ export default function Security({
             <div className="space-y-6">
                 <Heading
                     variant="small"
-                    title="Update password"
+                    title="Perbarui password"
                     description="Ensure your account is using a long, random password to stay secure"
                 />
 

@@ -47,7 +47,6 @@ class GuruAbsensiRekapController extends Controller
             'gurus' => $gurus->map(fn ($g) => [
                 'id' => $g->id,
                 'nama' => $g->nama,
-                'nip' => $g->nip,
             ]),
             'filters' => [
                 'guru_id' => $guruId,

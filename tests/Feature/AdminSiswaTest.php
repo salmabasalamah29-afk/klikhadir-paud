@@ -1,7 +1,5 @@
 <?php
 
-use App\Models\JenjangKelas;
-use App\Models\Jurusan;
 use App\Models\Kelas;
 use App\Models\Siswa;
 use App\Models\User;
@@ -16,11 +14,7 @@ beforeEach(function () {
     $this->admin = User::factory()->create(['role' => 'admin', 'password_default' => false]);
     $this->actingAs($this->admin);
 
-    $this->kelas = Kelas::create([
-        'jurusan_id' => Jurusan::create(['nama_jurusan' => 'Aplikasi Perkantoran', 'singkatan' => 'AP'])->id,
-        'jenjang_kelas_id' => JenjangKelas::create(['nama_jenjang' => 'XI', 'urutan' => 11])->id,
-        'nama_kelas' => 'A',
-    ]);
+    $this->kelas = Kelas::create(['nama_kelas' => 'Kelompok A']);
 });
 
 test('guest is redirected to login on siswa index', function () {
@@ -40,9 +34,34 @@ test('admin can view siswa list', function () {
     $this->get(route('admin.siswa.index'))->assertOk();
 });
 
-test('admin can create siswa with valid NIS format', function () {
-    $response = $this->post(route('admin.siswa.store'), [
+test('admin can search siswa by nisn', function () {
+    Siswa::create([
+        'user_id' => User::factory()->create(['role' => 'siswa', 'username' => '24.012505'])->id,
+        'kelas_id' => $this->kelas->id,
         'nis' => '24.012505',
+        'nisn' => '0012345678',
+        'nama' => 'Velove Azalia Putri',
+    ]);
+
+    Siswa::create([
+        'user_id' => User::factory()->create(['role' => 'siswa', 'username' => '24.012506'])->id,
+        'kelas_id' => $this->kelas->id,
+        'nis' => '24.012506',
+        'nisn' => '0099999999',
+        'nama' => 'Siswa Lain',
+    ]);
+
+    $this->get(route('admin.siswa.index', ['search' => '0012345678']))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('admin/siswa/index')
+            ->has('siswas.data', 1)
+            ->where('siswas.data.0.nisn', '0012345678'));
+});
+
+test('admin can create siswa with NISN', function () {
+    $response = $this->post(route('admin.siswa.store'), [
+        'nisn' => '0012345678',
         'nama' => 'Velove Azalia Putri',
         'jenis_kelamin' => 'perempuan',
         'kelas_id' => $this->kelas->id,
@@ -51,23 +70,28 @@ test('admin can create siswa with valid NIS format', function () {
     $response->assertRedirect();
 
     $this->assertDatabaseHas('siswas', [
-        'nis' => '24.012505',
+        'nis' => '0012345678',
+        'nisn' => '0012345678',
         'nama' => 'Velove Azalia Putri',
         'jenis_kelamin' => 'perempuan',
     ]);
+
+    $this->assertDatabaseHas('users', [
+        'username' => '0012345678',
+        'name' => 'Velove Azalia Putri',
+    ]);
 });
 
-test('admin cannot create siswa with wrong NIS format', function () {
+test('admin cannot create siswa without NISN', function () {
     $response = $this->post(route('admin.siswa.store'), [
-        'nis' => '24.0125',
         'nama' => 'Velove Azalia Putri',
         'kelas_id' => $this->kelas->id,
     ]);
 
-    $response->assertSessionHasErrors(['nis']);
+    $response->assertSessionHasErrors(['nisn']);
 });
 
-test('admin can update siswa with its existing NIS', function () {
+test('admin can update siswa with NISN', function () {
     $siswa = Siswa::create([
         'user_id' => User::factory()->create(['role' => 'siswa', 'username' => '24.012505'])->id,
         'kelas_id' => $this->kelas->id,
@@ -76,7 +100,7 @@ test('admin can update siswa with its existing NIS', function () {
     ]);
 
     $response = $this->put(route('admin.siswa.update', $siswa->id), [
-        'nis' => '24.012505',
+        'nisn' => '0012345678',
         'nama' => 'Velove Azalia Putri',
         'jenis_kelamin' => 'perempuan',
         'kelas_id' => $this->kelas->id,
@@ -86,8 +110,14 @@ test('admin can update siswa with its existing NIS', function () {
 
     $this->assertDatabaseHas('siswas', [
         'id' => $siswa->id,
-        'nis' => '24.012505',
+        'nis' => '0012345678',
+        'nisn' => '0012345678',
         'jenis_kelamin' => 'perempuan',
+    ]);
+
+    $this->assertDatabaseHas('users', [
+        'id' => $siswa->user_id,
+        'username' => '0012345678',
     ]);
 });
 
@@ -95,7 +125,7 @@ test('admin can create siswa with an uploaded foto', function () {
     Storage::fake('public');
 
     $response = $this->post(route('admin.siswa.store'), [
-        'nis' => '24.012505',
+        'nisn' => '0012345678',
         'nama' => 'Velove Azalia Putri',
         'jenis_kelamin' => 'perempuan',
         'kelas_id' => $this->kelas->id,
@@ -104,9 +134,9 @@ test('admin can create siswa with an uploaded foto', function () {
 
     $response->assertRedirect();
 
-    $this->assertDatabaseHas('siswas', ['nis' => '24.012505']);
+    $this->assertDatabaseHas('siswas', ['nisn' => '0012345678']);
 
-    $siswa = Siswa::where('nis', '24.012505')->first();
+    $siswa = Siswa::where('nisn', '0012345678')->first();
     $this->assertDatabaseHas('fotos', ['fotoable_id' => $siswa->id]);
 
     Storage::disk('public')->assertExists($siswa->foto->file_path);
@@ -117,13 +147,13 @@ test('uploaded foto is cropped to a 4x4 (square) ratio', function () {
     Storage::fake('public');
 
     $this->post(route('admin.siswa.store'), [
-        'nis' => '24.012505',
+        'nisn' => '0012345678',
         'nama' => 'Velove Azalia Putri',
         'kelas_id' => $this->kelas->id,
         'foto' => UploadedFile::fake()->image('foto.jpg', 200, 120)->size(300),
     ])->assertRedirect();
 
-    $siswa = Siswa::where('nis', '24.012505')->first();
+    $siswa = Siswa::where('nisn', '0012345678')->first();
     $fotoPath = $siswa->foto->file_path;
 
     Storage::disk('public')->assertExists($fotoPath);
@@ -153,7 +183,7 @@ test('admin can update siswa with existing foto sent as URL string', function ()
     ]);
 
     $response = $this->put(route('admin.siswa.update', $siswa->id), [
-        'nis' => '24.012505',
+        'nisn' => '0012345678',
         'nama' => 'Velove Azalia Putri',
         'jenis_kelamin' => 'perempuan',
         'kelas_id' => $this->kelas->id,

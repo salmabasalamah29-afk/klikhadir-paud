@@ -30,6 +30,7 @@ class SiswaController extends Controller
                 $query->where(function ($q) use ($searchTrim) {
                     $q->whereLike('nama', "%{$searchTrim}%")
                         ->orWhereLike('nis', "%{$searchTrim}%")
+                        ->orWhereLike('nisn', "%{$searchTrim}%")
                         ->orWhereHas('kelas', function ($kq) use ($searchTrim) {
                             $kq->whereLike('nama_kelas', "%{$searchTrim}%");
                         });
@@ -61,8 +62,7 @@ class SiswaController extends Controller
         $this->normalizeFotoInput($request);
 
         $validated = $request->validate([
-            'nis' => ['required', 'string', 'max:20', 'unique:siswas,nis', 'regex:/^[0-9]{2}\.[0-9]{6}$/'],
-            'nisn' => 'nullable|string|max:20',
+            'nisn' => ['required', 'string', 'max:20', 'unique:siswas,nisn', 'unique:siswas,nis', 'unique:users,username'],
             'nik' => 'nullable|string|max:20',
             'nama' => 'required|string|max:255',
             'nama_panggilan' => 'nullable|string|max:100',
@@ -86,14 +86,15 @@ class SiswaController extends Controller
             'kelas_id' => 'required|exists:kelas,id',
             'foto' => 'nullable|file|mimes:jpg,jpeg,png|max:5120',
         ], [
-            'nis.regex' => 'Format NIS harus berupa XX.XXXXXX (misal: 24.012505).',
+            'nisn.required' => 'NISN wajib diisi.',
+            'nisn.unique' => 'NISN sudah digunakan.',
             'foto.mimes' => 'Foto harus format JPG, JPEG, atau PNG.',
             'foto.max' => 'Ukuran foto maksimal 5 MB.',
         ]);
 
         $user = User::create([
             'name' => $validated['nama'],
-            'username' => $validated['nis'],
+            'username' => $validated['nisn'],
             'password' => Hash::make('password'),
             'password_default' => true,
             'role' => 'siswa',
@@ -102,8 +103,8 @@ class SiswaController extends Controller
         $siswa = Siswa::create([
             'user_id' => $user->id,
             'kelas_id' => $validated['kelas_id'],
-            'nis' => $validated['nis'],
-            'nisn' => $validated['nisn'] ?? null,
+            'nis' => $validated['nisn'],
+            'nisn' => $validated['nisn'],
             'nik' => $validated['nik'] ?? null,
             'nama' => $validated['nama'],
             'nama_panggilan' => $validated['nama_panggilan'] ?? null,
@@ -139,8 +140,14 @@ class SiswaController extends Controller
         $this->normalizeFotoInput($request);
 
         $validated = $request->validate([
-            'nis' => ['required', 'string', 'max:20', Rule::unique('siswas')->ignore($siswa->id), 'regex:/^[0-9]{2}\.[0-9]{6}$/'],
-            'nisn' => 'nullable|string|max:20',
+            'nisn' => [
+                'required',
+                'string',
+                'max:20',
+                Rule::unique('siswas', 'nisn')->ignore($siswa->id),
+                Rule::unique('siswas', 'nis')->ignore($siswa->id),
+                Rule::unique('users', 'username')->ignore($siswa->user_id),
+            ],
             'nik' => 'nullable|string|max:20',
             'nama' => 'required|string|max:255',
             'nama_panggilan' => 'nullable|string|max:100',
@@ -166,14 +173,15 @@ class SiswaController extends Controller
             'foto' => 'nullable|file|mimes:jpg,jpeg,png|max:5120',
             'remove_foto' => 'nullable|boolean',
         ], [
-            'nis.regex' => 'Format NIS harus berupa XX.XXXXXX (misal: 24.012505).',
+            'nisn.required' => 'NISN wajib diisi.',
+            'nisn.unique' => 'NISN sudah digunakan.',
             'foto.mimes' => 'Foto harus format JPG, JPEG, atau PNG.',
             'foto.max' => 'Ukuran foto maksimal 5 MB.',
         ]);
 
         $siswa->update([
-            'nis' => $validated['nis'],
-            'nisn' => $validated['nisn'] ?? null,
+            'nis' => $validated['nisn'],
+            'nisn' => $validated['nisn'],
             'nik' => $validated['nik'] ?? null,
             'nama' => $validated['nama'],
             'nama_panggilan' => $validated['nama_panggilan'] ?? null,
@@ -199,7 +207,7 @@ class SiswaController extends Controller
 
         $userUpdate = [
             'name' => $validated['nama'],
-            'username' => $validated['nis'],
+            'username' => $validated['nisn'],
         ];
 
         if (! empty($validated['password'])) {

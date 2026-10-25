@@ -18,7 +18,6 @@ interface GuruUser {
     guru?: {
         id: number;
         nama: string;
-        nip: string | null;
     };
 }
 
@@ -395,7 +394,7 @@ export default function GuruExportAbsensi({
                                                                     className="size-4 shrink-0"
                                                                 />
                                                                 <span className="flex-1 break-words whitespace-normal leading-snug">
-                                                                    {g.guru?.nama} ({g.guru?.nip || '-'})
+                                                                    {g.guru?.nama}
                                                                 </span>
                                                             </label>
                                                         ))

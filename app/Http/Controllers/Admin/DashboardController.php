@@ -35,7 +35,7 @@ class DashboardController extends Controller
         // Attendance stats for the selected date - hitung berdasarkan data terbaru per siswa dengan merge surat seharian (berhalangan mengalahkan Hadir)
         // Jika tanggal di luar tahun aktif, kosongkan (sudah diarsip)
         if ($isOutOfYear) {
-            $attendanceStats = ['hadir' => 0, 'sakit' => 0, 'izin' => 0, 'alpha' => 0, 'dispensasi' => 0];
+            $attendanceStats = ['hadir' => 0, 'sakit' => 0, 'izin' => 0];
             $kelasSudahAbsen = 0;
         } else {
             $rawForDate = Absensi::where('tanggal', $tanggal)
@@ -53,7 +53,7 @@ class DashboardController extends Controller
                     return $tb <=> $ta;
                 })->values();
                 $berhalangan = $sorted->first(function ($it) {
-                    return in_array($it->status, ['sakit', 'izin', 'dispensasi', 'alpha'], true);
+                    return in_array($it->status, ['sakit', 'izin'], true);
                 });
 
                 return $berhalangan ?? $sorted->first();
@@ -63,8 +63,6 @@ class DashboardController extends Controller
                 'hadir' => $grouped['hadir'] ?? 0,
                 'sakit' => $grouped['sakit'] ?? 0,
                 'izin' => $grouped['izin'] ?? 0,
-                'alpha' => $grouped['alpha'] ?? 0,
-                'dispensasi' => $grouped['dispensasi'] ?? 0,
             ];
 
             // Kelas sudah diabsen: distinct kelas_id yang memiliki absensi di tanggal tersebut
@@ -134,7 +132,6 @@ class DashboardController extends Controller
                 return [
                     'id' => $guru->id,
                     'nama' => $guru->nama,
-                    'nip' => $guru->nip,
                     'kelasList' => $guru->kelas->map(function ($kelas) {
                         return [
                             'id' => $kelas->id,

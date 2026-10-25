@@ -30,6 +30,16 @@ import { useAutoRefresh } from '@/hooks/use-auto-refresh';
 import { dashboard as adminDashboard } from '@/routes/admin';
 import adminGuru from '@/routes/admin/guru';
 
+interface Guru {
+    id: number;
+    nama: string;
+    jenis_kelamin?: 'laki-laki' | 'perempuan' | null;
+    foto_url?: string | null;
+    user?: {
+        password_default: boolean;
+    };
+}
+
 interface PaginatedData<T> {
     data: T[];
     links: {
@@ -39,9 +49,9 @@ interface PaginatedData<T> {
     }[];
 }
 
-export default function GuruIndex({ 
-    gurus = [],
-}: { 
+export default function GuruIndex({
+    gurus,
+}: {
     gurus: PaginatedData<Guru>;
 }) {
     const [editingGuru, setEditingGuru] = useState<Guru | null>(null);
@@ -188,10 +198,10 @@ export default function GuruIndex({
                         </p>
                     </div>
                     <div className="flex items-center gap-2">
-                        <Button onClick={handleOpenCreate} className="bg-white text-black border border-zinc-200 shadow-xs hover:bg-zinc-50 dark:bg-white dark:text-black dark:border-zinc-200 dark:hover:bg-zinc-100">
-                            <Plus className="mr-2 h-4 w-4" /> Tambah
+                        <Button onClick={handleOpenCreate} className="min-w-28 bg-white text-black border border-zinc-200 shadow-xs hover:bg-zinc-50 dark:bg-white dark:text-black dark:border-zinc-200 dark:hover:bg-zinc-100">
+                            <Plus className="h-4 w-4" /> Tambah
                         </Button>
-                        <CsvImport entity="guru" title="Impor Guru" description="Header: nama, jenis_kelamin" />
+                        <CsvImport entity="guru" title="Impor Guru" description="Header harus persis: nama, jenis_kelamin." />
                     </div>
                 </div>
 
@@ -199,7 +209,7 @@ export default function GuruIndex({
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
-                            placeholder="Cari nama guru"
+                            placeholder="Cari nama guru..."
                             value={search}
                             onChange={(e) => handleSearch(e.target.value)}
                             className="pl-9 bg-muted/30"
@@ -422,7 +432,7 @@ export default function GuruIndex({
                                     'Proses...'
                                 ) : editingGuru ? (
                                     <>
-                                        <Save className="mr-2 h-4 w-4" /> Update
+                                        <Save className="mr-2 h-4 w-4" /> Perbarui
                                     </>
                                 ) : (
                                     <>

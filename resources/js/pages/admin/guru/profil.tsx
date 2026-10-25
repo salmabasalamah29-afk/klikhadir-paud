@@ -1,5 +1,5 @@
 import { Head, Link } from '@inertiajs/react';
-import { ArrowLeft, Users, UserRound } from 'lucide-react';
+import { ArrowLeft, BookOpen, Users, UserRound } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,7 +9,6 @@ import adminGuru from '@/routes/admin/guru';
 
 interface Guru {
     id: number;
-    nip: string;
     nama: string;
     jenis_kelamin?: 'laki-laki' | 'perempuan' | null;
     foto_url?: string | null;
@@ -53,7 +52,6 @@ export default function GuruProfil({ guru }: { guru: Guru }) {
                         </Avatar>
                         <div className="flex flex-col items-center gap-1 text-center sm:items-start sm:text-left">
                             <h2 className="text-xl font-bold">{guru.nama}</h2>
-                            <p className="font-mono text-sm text-muted-foreground">NIP: {guru.nip}</p>
                             {guru.user?.password_default ? (
                                 <span className="mt-1 inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
                                     Status Sandi: Default
@@ -80,10 +78,6 @@ export default function GuruProfil({ guru }: { guru: Guru }) {
                             <div>
                                 <p className="text-xs text-muted-foreground">Nama Lengkap</p>
                                 <p className="font-medium">{guru.nama}</p>
-                            </div>
-                            <div>
-                                <p className="text-xs text-muted-foreground">NIP</p>
-                                <p className="font-mono font-medium">{guru.nip}</p>
                             </div>
                             <div>
                                 <p className="text-xs text-muted-foreground">Jenis Kelamin</p>

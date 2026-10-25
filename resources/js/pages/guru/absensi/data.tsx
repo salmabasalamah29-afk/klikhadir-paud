@@ -361,7 +361,7 @@ export default function GuruDataAbsensi({
                                     <span className="inline-flex items-center gap-1 rounded-full border px-3 py-1 bg-muted/30"><Calendar className="h-3 w-3" /> {filters.tanggal}</span>
                                     <span className="inline-flex items-center gap-1 rounded-full border px-3 py-1 bg-muted/30"><GraduationCap className="h-3 w-3" /> {selectedKelas?.full_nama_kelas ?? '-'}</span>
                                     <span className="inline-flex items-center gap-1 rounded-full border px-3 py-1 bg-muted/30">total: {totalAbsensi} siswa</span>
-                                    <span className="inline-flex items-center gap-1 rounded-full border px-3 py-1 bg-muted/30">waktu update: {waktuUpdateDisplay}</span>
+                                    <span className="inline-flex items-center gap-1 rounded-full border px-3 py-1 bg-muted/30">terakhir diperbarui: {waktuUpdateDisplay}</span>
                                 </div>
 
                                 {/* Indikator Guru dan Waktu Aktif */}
@@ -374,7 +374,7 @@ export default function GuruDataAbsensi({
                                             <span className="text-xs text-muted-foreground"> jam ke-{guruAktif.jam_ke} {guruAktif.waktu ? `(${guruAktif.waktu})` : ''}</span>
                                         </div>
                                     ) : (
-                                        <p className="text-xs text-muted-foreground">Belum ada update untuk kelas ini pada tanggal {filters.tanggal}.</p>
+                                        <p className="text-xs text-muted-foreground">Belum ada pembaruan untuk kelas ini pada tanggal {filters.tanggal}.</p>
                                     )}
                                 </div>
 

@@ -141,8 +141,8 @@ export default function KelasIndex({
                         <p className="text-muted-foreground">Kelola data kelas siswa.</p>
                     </div>
                     <div className="flex gap-2">
-                        <Button onClick={handleOpenCreate} className="bg-white text-black border border-zinc-200 shadow-xs hover:bg-zinc-50 dark:bg-white dark:text-black dark:border-zinc-200 dark:hover:bg-zinc-100">
-                            <Plus className="mr-2 h-4 w-4" /> Tambah
+                        <Button onClick={handleOpenCreate} className="min-w-28 bg-white text-black border border-zinc-200 shadow-xs hover:bg-zinc-50 dark:bg-white dark:text-black dark:border-zinc-200 dark:hover:bg-zinc-100">
+                            <Plus className="h-4 w-4" /> Tambah
                         </Button>
                         <CsvImport entity="kelas" title="Impor Kelas" description="Header: nama_kelas" />
                     </div>
@@ -230,7 +230,7 @@ export default function KelasIndex({
                                 id="nama_kelas"
                                 value={data.nama_kelas}
                                 onChange={(e) => setData('nama_kelas', e.target.value)}
-                                placeholder="Contoh: A, B, 1, 2"
+                                placeholder="Contoh: KB A"
                                 className="bg-muted/30"
                             />
                             {errors.nama_kelas && <p className="text-xs text-destructive">{errors.nama_kelas}</p>}
@@ -245,7 +245,7 @@ export default function KelasIndex({
                                     'Proses...'
                                 ) : editingKelas ? (
                                     <>
-                                        <Save className="mr-2 h-4 w-4" /> Update
+                                        <Save className="mr-2 h-4 w-4" /> Perbarui
                                     </>
                                 ) : (
                                     <>

@@ -8,6 +8,7 @@ use App\Models\Kelas;
 use App\Models\Siswa;
 use App\Models\TahunAjaran;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -36,30 +37,30 @@ class ImportController extends Controller
         'kelas' => [
             'headers' => ['nama_kelas'],
             'examples' => [
-                ['A'],
+                ['TK A'],
             ],
             'description' => 'Kelas: nama_kelas opsional, kosongkan jika tidak ada.',
         ],
         'guru' => [
-            'headers' => ['nip', 'nama', 'jenis_kelamin', 'kelas'],
+            'headers' => ['nama', 'jenis_kelamin'],
             'examples' => [
-                ['198001012010011001', 'Budi Santoso S.Pd', 'L', 'XI PPLG A;XII PPLG A'],
+                ['Hilmia Milandari', 'P'],
             ],
-            'description' => 'Guru: NIP 18 digit unik, jenis_kelamin L/P (L=laki-laki, P=perempuan), kelas = full_nama_kelas dipisah ;',
+            'description' => 'Guru: nama wajib diisi, jenis_kelamin L/P (L=laki-laki, P=perempuan).',
         ],
         'siswa' => [
-            'headers' => ['nis', 'nisn', 'nik', 'nama', 'nama_panggilan', 'jenis_kelamin', 'tempat_lahir', 'tanggal_lahir', 'agama', 'tanggal_masuk', 'nama_ayah', 'pekerjaan_ayah', 'nama_ibu', 'pekerjaan_ibu', 'no_hp', 'anak_ke', 'nama_jalan', 'desa', 'kecamatan', 'kabupaten_kota', 'provinsi', 'kode_pos', 'kelas'],
+            'headers' => ['nisn', 'nik', 'nama', 'nama_panggilan', 'jenis_kelamin', 'tempat_lahir', 'tanggal_lahir', 'agama', 'tanggal_masuk', 'kelas', 'nama_ayah', 'pekerjaan_ayah', 'nama_ibu', 'pekerjaan_ibu', 'no_hp', 'anak_ke', 'nama_jalan', 'desa', 'kecamatan', 'kabupaten_kota', 'provinsi', 'kode_pos'],
             'examples' => [
-                ['24.012501', '240125010001', '1234567890123456', 'Andi Wijaya', 'Andi', 'laki-laki', 'Jakarta', '2020-01-15', 'Islam', '2024-07-01', 'Budi', 'PNS', 'Siti', 'Ibu Rumah Tangga', '08123456789', '1', 'Jln. Merdeka', 'Desa Maju', 'Kecamatan Tengah', 'Kabupaten Bogor', 'Jawa Barat', '16121', 'KB A'],
+                ['240125010001', '1234567890123456', 'Andi Wijaya', 'Andi', 'laki-laki', 'Jakarta', '2020-01-15', 'Islam', '2024-07-01', 'KB A', 'Budi', 'PNS', 'Siti', 'Ibu Rumah Tangga', '08123456789', '1', 'Jln. Merdeka', 'Desa Maju', 'Kecamatan Tengah', 'Kabupaten Bogor', 'Jawa Barat', '16121'],
             ],
-            'description' => 'Siswa: NIS format XX.XXXXXX unik, NISN, NIK, Nama, Nama Panggilan, Jenis Kelamin (L/P), Tempat Lahir, Tanggal Lahir, Agama, Tanggal Masuk, Nama Ayah, Pekerjaan Ayah, Nama Ibu, Pekerjaan Ibu, No HP, Anak ke-, Nama Jalan, Desa, Kecamatan, Kabupaten/Kota, Provinsi, Kode Pos, Kelas (nama kelas harus sudah ada)',
+            'description' => 'Siswa: NISN wajib dan unik, data pribadi, orang tua, alamat, dan Kelas (nama kelas harus sudah ada).',
         ],
         'admin' => [
-            'headers' => ['name', 'email', 'password'],
+            'headers' => ['nama', 'email', 'password'],
             'examples' => [
                 ['Admin Kurikulum', 'admin@sekolah.com', 'password123'],
             ],
-            'description' => 'Admin: email unik, password opsional min 8 (default password jika kosong)',
+            'description' => 'Admin: nama wajib diisi, email unik, password opsional min 8 (default password jika kosong)',
         ],
     ];
 
@@ -74,7 +75,6 @@ class ImportController extends Controller
 
         return response()->streamDownload(function () use ($template) {
             $out = fopen('php://output', 'w');
-            fwrite($out, "\xEF\xBB\xBF");
             fputcsv($out, $template['headers']);
             foreach ($template['examples'] as $row) {
                 fputcsv($out, $row);
@@ -245,56 +245,34 @@ class ImportController extends Controller
         $row['jenis_kelamin'] = $this->normalizeJenisKelamin($row['jenis_kelamin'] ?? null);
 
         Validator::make($row, [
-            'nip' => 'required|digits:18',
             'nama' => 'required|string|max:255',
             'jenis_kelamin' => 'nullable|in:laki-laki,perempuan',
-            'kelas' => 'nullable|string',
         ], [
-            'nip.required' => 'NIP wajib diisi',
-            'nip.digits' => 'NIP harus 18 digit angka',
             'nama.required' => 'Nama wajib diisi',
             'jenis_kelamin.in' => 'Jenis kelamin harus L atau P (L=laki-laki, P=perempuan)',
         ])->validate();
 
-        $existing = Guru::where('nip', $row['nip'])->first();
+        $existing = Guru::whereRaw('LOWER(nama) = ?', [mb_strtolower(trim($row['nama']))])->first();
+
         if ($existing) {
             $existing->update([
                 'nama' => $row['nama'],
                 'jenis_kelamin' => $row['jenis_kelamin'] ?: $existing->jenis_kelamin,
             ]);
-            $guru = $existing;
+            $existing->user->update(['name' => $row['nama']]);
         } else {
             $user = User::create([
                 'name' => $row['nama'],
-                'username' => $row['nip'],
+                'username' => $this->generateUsername($row['nama']),
                 'password' => Hash::make('password'),
                 'password_default' => true,
                 'role' => 'guru',
             ]);
-            $guru = Guru::create([
+            Guru::create([
                 'user_id' => $user->id,
-                'nip' => $row['nip'],
                 'nama' => $row['nama'],
                 'jenis_kelamin' => $row['jenis_kelamin'] ?: null,
             ]);
-        }
-
-        if (isset($row['kelas']) && $row['kelas'] !== '') {
-            $kelasNames = array_filter(array_map('trim', explode(';', $row['kelas'])));
-            $kelasIds = [];
-            foreach ($kelasNames as $full) {
-                $kelas = Kelas::get()->first(fn ($k) => $k->full_nama_kelas === $full);
-                if (! $kelas) {
-                    $kelas = Kelas::where('nama_kelas', $full)->first();
-                }
-                if (! $kelas) {
-                    throw new \Exception("Kelas '$full' tidak ditemukan");
-                }
-                $kelasIds[] = $kelas->id;
-            }
-            if (! empty($kelasIds)) {
-                $guru->kelas()->syncWithoutDetaching($kelasIds);
-            }
         }
 
         return true;
@@ -303,18 +281,19 @@ class ImportController extends Controller
     private function importSiswa(array $row): bool
     {
         $row['jenis_kelamin'] = $this->normalizeJenisKelamin($row['jenis_kelamin'] ?? null);
+        $row['tanggal_lahir'] = $this->normalizeTanggal($row['tanggal_lahir'] ?? null);
+        $row['tanggal_masuk'] = $this->normalizeTanggal($row['tanggal_masuk'] ?? null);
 
         Validator::make($row, [
-            'nis' => ['required', 'string', 'max:20', 'regex:/^[0-9]{2}\.[0-9]{6}$/'],
-            'nisn' => 'nullable|string|max:20',
+            'nisn' => ['required', 'string', 'max:20', 'unique:siswas,nisn', 'unique:siswas,nis', 'unique:users,username'],
             'nik' => 'nullable|string|max:20',
             'nama' => 'required|string|max:255',
             'nama_panggilan' => 'nullable|string|max:100',
             'jenis_kelamin' => 'nullable|in:laki-laki,perempuan',
             'tempat_lahir' => 'nullable|string|max:100',
-            'tanggal_lahir' => 'nullable|date',
+            'tanggal_lahir' => 'nullable|date_format:Y-m-d',
             'agama' => 'nullable|string|max:50',
-            'tanggal_masuk' => 'nullable|date',
+            'tanggal_masuk' => 'nullable|date_format:Y-m-d',
             'nama_ayah' => 'nullable|string|max:100',
             'pekerjaan_ayah' => 'nullable|string|max:100',
             'nama_ibu' => 'nullable|string|max:100',
@@ -329,16 +308,14 @@ class ImportController extends Controller
             'kode_pos' => 'nullable|string|max:10',
             'kelas' => 'required|string|max:255',
         ], [
-            'nis.required' => 'NIS wajib diisi',
-            'nis.regex' => 'NIS harus format XX.XXXXXX (contoh 24.012501)',
+            'nisn.required' => 'NISN wajib diisi',
+            'nisn.unique' => 'NISN sudah digunakan',
             'nama.required' => 'Nama wajib diisi',
             'jenis_kelamin.in' => 'Jenis kelamin harus L atau P (L=laki-laki, P=perempuan)',
+            'tanggal_lahir.date_format' => 'Tanggal lahir tidak valid. Gunakan format YYYY-MM-DD atau M/D/YYYY.',
+            'tanggal_masuk.date_format' => 'Tanggal masuk tidak valid. Gunakan format YYYY-MM-DD atau M/D/YYYY.',
             'kelas.required' => 'Kelas wajib diisi (isi dengan nama kelas)',
         ])->validate();
-
-        if (Siswa::where('nis', $row['nis'])->exists()) {
-            throw new \Exception("NIS {$row['nis']} sudah ada");
-        }
 
         $kelas = Kelas::get()->first(fn ($k) => $k->full_nama_kelas === trim($row['kelas']));
         if (! $kelas) {
@@ -350,7 +327,7 @@ class ImportController extends Controller
 
         $user = User::create([
             'name' => $row['nama'],
-            'username' => $row['nis'],
+            'username' => $row['nisn'],
             'password' => Hash::make('password'),
             'password_default' => true,
             'role' => 'siswa',
@@ -359,8 +336,8 @@ class ImportController extends Controller
         Siswa::create([
             'user_id' => $user->id,
             'kelas_id' => $kelas->id,
-            'nis' => $row['nis'],
-            'nisn' => $row['nisn'] ?? null,
+            'nis' => $row['nisn'],
+            'nisn' => $row['nisn'],
             'nik' => $row['nik'] ?? null,
             'nama' => $row['nama'],
             'nama_panggilan' => $row['nama_panggilan'] ?? null,
@@ -389,12 +366,12 @@ class ImportController extends Controller
     private function importAdmin(array $row): bool
     {
         Validator::make($row, [
-            'name' => 'required|string|max:255',
+            'nama' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email',
             'password' => 'nullable|string|min:8',
         ], [
-            'name.required' => 'Nama admin wajib diisi',
-            'name.max' => 'Nama maksimal 255 karakter',
+            'nama.required' => 'Nama admin wajib diisi',
+            'nama.max' => 'Nama maksimal 255 karakter',
             'email.required' => 'Email wajib diisi',
             'email.email' => 'Format email tidak valid',
             'email.max' => 'Email maksimal 255 karakter',
@@ -405,22 +382,106 @@ class ImportController extends Controller
         $password = $row['password'] ?: 'password';
         $username = strstr($row['email'], '@', true) ?: $row['email'];
 
-        $baseUsername = $username;
-        $counter = 1;
-        while (User::where('username', $username)->exists()) {
-            $username = $baseUsername.$counter++;
-        }
-
         User::create([
-            'name' => $row['name'],
+            'name' => $row['nama'],
             'email' => $row['email'],
-            'username' => $username,
+            'username' => $this->generateUsername($username),
             'password' => Hash::make($password),
             'role' => 'admin',
             'password_default' => empty($row['password']),
         ]);
 
         return true;
+    }
+
+    private function generateUsername(string $baseUsername): string
+    {
+        $baseUsername = strtolower(str_replace(' ', '', $baseUsername));
+        $username = $baseUsername;
+        $counter = 1;
+
+        while (User::where('username', $username)->exists()) {
+            $username = $baseUsername.$counter++;
+        }
+
+        return $username;
+    }
+
+    private function normalizeTanggal(?string $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $value = trim($value);
+        if ($value === '') {
+            return null;
+        }
+
+        if (preg_match('/^\d{8}$/', $value) === 1) {
+            return $this->formatTanggal(
+                (int) substr($value, 0, 4),
+                (int) substr($value, 4, 2),
+                (int) substr($value, 6, 2),
+            ) ?? $value;
+        }
+
+        if (is_numeric($value)) {
+            $serial = (float) $value;
+
+            if ($serial <= 0) {
+                return null;
+            }
+
+            if ($serial < 100000) {
+                return Carbon::create(1899, 12, 30)->addDays((int) $serial)->toDateString();
+            }
+
+            return $value;
+        }
+
+        if (preg_match('/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})(?:\s+.*)?$/', $value, $matches) === 1) {
+            return $this->formatTanggal(
+                (int) $matches[1],
+                (int) $matches[2],
+                (int) $matches[3],
+            ) ?? $value;
+        }
+
+        if (preg_match('/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{2,4})(?:\s+.*)?$/', $value, $matches) === 1) {
+            $first = (int) $matches[1];
+            $second = (int) $matches[2];
+            $year = (int) $matches[3];
+
+            if ($year < 100) {
+                $year += $year >= 70 ? 1900 : 2000;
+            }
+
+            if ($first > 12 && $second <= 12) {
+                $day = $first;
+                $month = $second;
+            } else {
+                $month = $first;
+                $day = $second;
+            }
+
+            return $this->formatTanggal($year, $month, $day) ?? $value;
+        }
+
+        try {
+            return Carbon::parse($value)->toDateString();
+        } catch (\Throwable) {
+            return $value;
+        }
+    }
+
+    private function formatTanggal(int $year, int $month, int $day): ?string
+    {
+        if (! checkdate($month, $day, $year)) {
+            return null;
+        }
+
+        return sprintf('%04d-%02d-%02d', $year, $month, $day);
     }
 
     private function normalizeJenisKelamin(?string $value): ?string

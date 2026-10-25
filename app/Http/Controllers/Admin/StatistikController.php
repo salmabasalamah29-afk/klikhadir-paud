@@ -15,7 +15,7 @@ class StatistikController extends Controller
 {
     public function index(Request $request, string $status)
     {
-        $allowed = ['hadir', 'sakit', 'izin', 'alpha', 'dispensasi', 'kelas'];
+        $allowed = ['hadir', 'sakit', 'izin', 'kelas'];
         if (! in_array($status, $allowed, true)) {
             abort(404);
         }
@@ -63,8 +63,8 @@ class StatistikController extends Controller
 
     private function statusDetail(string $tanggal, string $status, ?array $activeYear = null, bool $isOutOfYear = false)
     {
-        // Ambil data paling terbaru saja per siswa dengan merge surat seharian - jangan double, berhalangan mengalahkan Hadir
-        $rawAll = Absensi::with(['siswa.kelas.jurusan', 'siswa.kelas.jenjangKelas', 'siswa.foto', 'mapel', 'guru'])
+        // Ambil data paling terbaru per siswa, status berhalangan mengalahkan hadir
+        $rawAll = Absensi::with(['siswa.kelas', 'siswa.foto', 'guru'])
             ->where('tanggal', $tanggal)
             ->orderBy('updated_at', 'desc')
             ->orderBy('id', 'desc')
@@ -80,18 +80,10 @@ class StatistikController extends Controller
                 return $tb <=> $ta;
             })->values();
             $berhalangan = $sorted->first(function ($it) {
-                return in_array($it->status, ['sakit', 'izin', 'dispensasi', 'alpha'], true);
+                return in_array($it->status, ['sakit', 'izin'], true);
             });
 
             $primary = $berhalangan ?? $sorted->first();
-            if ($primary && empty($primary->bukti)) {
-                $latestBukti = $sorted->first(function ($it) {
-                    return ! empty($it->bukti);
-                });
-                if ($latestBukti) {
-                    $primary->setAttribute('bukti', $latestBukti->bukti);
-                }
-            }
 
             return $primary;
         })->filter()->values();
@@ -106,16 +98,12 @@ class StatistikController extends Controller
                 return [
                     'id' => $absensi->id,
                     'tanggal' => $absensi->tanggal,
-                    'jam_ke' => $absensi->jam_ke,
-                    'waktu_mulai' => $absensi->waktu_mulai,
-                    'waktu_selesai' => $absensi->waktu_selesai,
                     'status' => $absensi->status,
                     'keterangan' => $absensi->keterangan,
-                    'bukti' => $absensi->bukti,
                     'updated_at' => $absensi->updated_at?->timezone('Asia/Jakarta')->format('Y-m-d H:i:s'),
                     'siswa' => $siswa ? [
                         'id' => $siswa->id,
-                        'nis' => $siswa->nis,
+                        'nisn' => $siswa->nisn,
                         'nama' => $siswa->nama,
                         'foto_url' => $siswa->foto_url,
                     ] : null,
@@ -123,12 +111,6 @@ class StatistikController extends Controller
                         'id' => $kelas->id,
                         'nama_kelas' => $kelas->nama_kelas,
                         'full_nama_kelas' => $kelas->full_nama_kelas,
-                        'tingkat' => $kelas->jenjangKelas?->nama_jenjang,
-                        'jurusan_singkatan' => $kelas->jurusan?->singkatan,
-                    ] : null,
-                    'mapel' => $absensi->mapel ? [
-                        'id' => $absensi->mapel->id,
-                        'nama_mapel' => $absensi->mapel->nama_mapel,
                     ] : null,
                     'guru' => $absensi->guru ? [
                         'id' => $absensi->guru->id,
@@ -168,8 +150,8 @@ class StatistikController extends Controller
             ->distinct()
             ->pluck('siswas.kelas_id');
 
-        $kelasList = Kelas::with(['jurusan', 'jenjangKelas'])->whereIn('id', $kelasIds)->orderBy('id')->get()->map(function ($kelas) use ($tanggal) {
-            // Hitung berdasarkan data terbaru per siswa dengan merge surat seharian - samain kaya lihat absensi
+        $kelasList = Kelas::whereIn('id', $kelasIds)->orderBy('id')->get()->map(function ($kelas) use ($tanggal) {
+            // Hitung berdasarkan data terbaru per siswa - samain kaya lihat absensi
             $rawInKelas = Absensi::where('tanggal', $tanggal)
                 ->whereHas('siswa', fn ($q) => $q->where('kelas_id', $kelas->id))
                 ->orderBy('updated_at', 'desc')
@@ -186,7 +168,7 @@ class StatistikController extends Controller
                     return $tb <=> $ta;
                 })->values();
                 $berhalangan = $sorted->first(function ($it) {
-                    return in_array($it->status, ['sakit', 'izin', 'dispensasi', 'alpha'], true);
+                    return in_array($it->status, ['sakit', 'izin'], true);
                 });
 
                 return $berhalangan ?? $sorted->first();
@@ -201,14 +183,10 @@ class StatistikController extends Controller
                 'id' => $kelas->id,
                 'nama_kelas' => $kelas->nama_kelas,
                 'full_nama_kelas' => $kelas->full_nama_kelas,
-                'jurusan_singkatan' => $kelas->jurusan?->singkatan,
-                'tingkat' => $kelas->jenjangKelas?->nama_jenjang,
                 'stats' => [
                     'hadir' => $stats['hadir'] ?? 0,
                     'sakit' => $stats['sakit'] ?? 0,
                     'izin' => $stats['izin'] ?? 0,
-                    'alpha' => $stats['alpha'] ?? 0,
-                    'dispensasi' => $stats['dispensasi'] ?? 0,
                 ],
                 'total_diabsen' => $totalSiswaDiabsen,
             ];

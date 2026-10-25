@@ -72,7 +72,6 @@ test('guru can authenticate and redirect to guru absensi index', function () {
     Guru::create([
         'user_id' => $user->id,
         'nama' => 'Guru Test',
-        'nip' => '12345678',
     ]);
 
     $response = $this->post(route('login.store'), [
@@ -148,7 +147,6 @@ test('guru login ignores stale intended url and redirects to guru absensi index'
     Guru::create([
         'user_id' => $user->id,
         'nama' => 'Guru Test',
-        'nip' => '12345678',
     ]);
 
     session()->put('url.intended', route('admin.dashboard'));
@@ -168,7 +166,6 @@ test('role sync migration repairs users role from guru and siswa records', funct
     Guru::create([
         'user_id' => $guru->id,
         'nama' => 'Guru Salah Role',
-        'nip' => '12345678',
     ]);
 
     $kelas = Kelas::create([

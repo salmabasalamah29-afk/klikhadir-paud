@@ -7,14 +7,11 @@ import guruAbsensi from '@/routes/guru/absensi';
 
 interface Profil {
     id: number;
-    nip: string;
     nama: string;
     jenis_kelamin?: 'laki-laki' | 'perempuan' | null;
     foto_url?: string | null;
     user?: { password_default: boolean };
     kelas?: { id: number; full_nama_kelas: string }[];
-    mataPelajarans?: { id: number; nama_mapel: string; kategori: string }[];
-    mata_pelajarans?: { id: number; nama_mapel: string; kategori: string }[];
 }
 
 export default function GuruProfil({ profil }: { profil: Profil }) {
@@ -25,7 +22,6 @@ export default function GuruProfil({ profil }: { profil: Profil }) {
               ? 'Laki-laki'
               : '-';
     const kelasList = profil.kelas ?? [];
-    const mapelList = profil.mataPelajarans ?? profil.mata_pelajarans ?? [];
 
     return (
         <>
@@ -54,7 +50,6 @@ export default function GuruProfil({ profil }: { profil: Profil }) {
                         </Avatar>
                         <div className="flex flex-col items-center gap-1 text-center sm:items-start sm:text-left">
                             <h2 className="text-xl font-bold">{profil.nama}</h2>
-                            <p className="font-mono text-sm text-muted-foreground">NIP: {profil.nip}</p>
                             {profil.user?.password_default ? (
                                 <span className="mt-1 inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
                                     Status Sandi: Default
@@ -83,10 +78,6 @@ export default function GuruProfil({ profil }: { profil: Profil }) {
                                 <p className="font-medium">{profil.nama}</p>
                             </div>
                             <div>
-                                <p className="text-xs text-muted-foreground">NIP</p>
-                                <p className="font-mono font-medium">{profil.nip}</p>
-                            </div>
-                            <div>
                                 <p className="text-xs text-muted-foreground">Jenis Kelamin</p>
                                 <p className="font-medium">{jenisKelamin}</p>
                             </div>
@@ -99,7 +90,7 @@ export default function GuruProfil({ profil }: { profil: Profil }) {
                                 <BookOpen className="h-4 w-4 text-primary" />
                                 Penempatan
                             </CardTitle>
-                            <CardDescription>Kelas dan mata pelajaran yang diampu.</CardDescription>
+                            <CardDescription>Kelas yang diampu.</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-3 text-sm">
                             <div>
@@ -115,22 +106,6 @@ export default function GuruProfil({ profil }: { profil: Profil }) {
                                         ))
                                     ) : (
                                         <span className="text-xs text-muted-foreground italic">Tidak ada kelas</span>
-                                    )}
-                                </div>
-                            </div>
-                            <div>
-                                <p className="mb-2 flex items-center gap-1 text-xs text-muted-foreground">
-                                    <BookOpen className="h-3.5 w-3.5" /> Mata Pelajaran
-                                </p>
-                                <div className="flex flex-wrap gap-1">
-                                    {mapelList.length > 0 ? (
-                                        mapelList.map((m) => (
-                                            <span key={m.id} className="inline-flex items-center rounded-md bg-blue-500/10 px-2 py-0.5 text-[10px] font-medium text-blue-600 ring-1 ring-inset ring-blue-500/20 dark:text-blue-400">
-                                                {m.nama_mapel} ({m.kategori})
-                                            </span>
-                                        ))
-                                    ) : (
-                                        <span className="text-xs text-muted-foreground italic">Tidak ada mata pelajaran</span>
                                     )}
                                 </div>
                             </div>

@@ -1,14 +1,43 @@
 import { Head, router } from '@inertiajs/react';
-import { Shield, ShieldCheck, Users, BookOpen, GraduationCap, Library, Activity, PieChart as PieChartIcon, CheckCircle, Clock, FileWarning, XCircle, Award, FileSpreadsheet, ChevronDown, Loader2 } from 'lucide-react';
-import { useState, useRef, useEffect } from 'react';
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import {
+    Shield,
+    ShieldCheck,
+    Users,
+    GraduationCap,
+    Activity,
+    PieChart as PieChartIcon,
+    FileSpreadsheet,
+    ChevronDown,
+    Loader2,
+    Search,
+} from 'lucide-react';
+import { useState, useRef } from 'react';
+import {
+    PieChart,
+    Pie,
+    Cell,
+    BarChart,
+    Bar,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+} from 'recharts';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
 import type { ChartConfig } from '@/components/ui/chart';
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import {
+    ChartContainer,
+    ChartTooltip,
+    ChartTooltipContent,
+} from '@/components/ui/chart';
 import { Input } from '@/components/ui/input';
-import SearchableSelect from '@/components/ui/searchable-select';
 import { useAutoRefresh } from '@/hooks/use-auto-refresh';
 import { dashboard as adminDashboard } from '@/routes/admin';
 
@@ -28,7 +57,6 @@ interface Kelas {
 interface GuruExport {
     id: number;
     nama: string;
-    nip: string | null;
     kelasList: KelasItem[];
 }
 
@@ -58,8 +86,6 @@ interface AdminDashboardProps {
         hadir: number;
         sakit: number;
         izin: number;
-        alpha: number;
-        dispensasi: number;
         kelas: number;
     };
     studentsPerKelas: {
@@ -73,7 +99,12 @@ interface AdminDashboardProps {
     detailedAttendance: DetailedAttendance[];
     gurus: GuruExport[];
     kelasList: Kelas[];
-    activeYear?: { tahun_awal: string; tahun_akhir: string; start: string; end: string } | null;
+    activeYear?: {
+        tahun_awal: string;
+        tahun_akhir: string;
+        start: string;
+        end: string;
+    } | null;
     isOutOfYear?: boolean;
 }
 
@@ -81,18 +112,15 @@ const attendanceConfig = {
     hadir: { label: 'Hadir', color: 'var(--chart-2)' },
     sakit: { label: 'Sakit', color: 'var(--chart-4)' },
     izin: { label: 'Izin', color: 'var(--chart-1)' },
-    alpha: { label: 'Alpha', color: 'var(--destructive)' },
-    dispensasi: { label: 'Dispensasi', color: 'var(--chart-5)' },
-    kelas: { label: 'Kelas', color: 'var(--chart-3)' },
 } satisfies ChartConfig;
 
 const kelasConfig = {
     count: { label: 'Jumlah Siswa', color: 'var(--chart-3)' },
 } satisfies ChartConfig;
 
-export default function AdminDashboard({ 
-    stats, 
-    attendanceToday, 
+export default function AdminDashboard({
+    stats,
+    attendanceToday,
     studentsPerKelas = [],
     filters,
     gurus = [],
@@ -101,14 +129,30 @@ export default function AdminDashboard({
     isOutOfYear = false,
 }: AdminDashboardProps) {
     const attendanceData = [
-        { status: 'hadir', count: attendanceToday.hadir, fill: 'var(--color-hadir)' },
-        { status: 'sakit', count: attendanceToday.sakit, fill: 'var(--color-sakit)' },
-        { status: 'izin', count: attendanceToday.izin, fill: 'var(--color-izin)' },
-        { status: 'alpha', count: attendanceToday.alpha, fill: 'var(--color-alpha)' },
-        { status: 'dispensasi', count: attendanceToday.dispensasi, fill: 'var(--color-dispensasi)' },
+        {
+            status: 'hadir',
+            count: attendanceToday.hadir,
+            fill: 'var(--color-hadir)',
+        },
+        {
+            status: 'sakit',
+            count: attendanceToday.sakit,
+            fill: 'var(--color-sakit)',
+        },
+        {
+            status: 'izin',
+            count: attendanceToday.izin,
+            fill: 'var(--color-izin)',
+        },
     ];
-    const kelasSudahAbsen = (attendanceToday as unknown as { kelas: number }).kelas ?? 0;
-    const gridData = [...attendanceData, { status: 'kelas', count: kelasSudahAbsen, fill: 'var(--color-kelas)' }];
+    const gridData = [
+        ...attendanceData,
+        {
+            status: 'kelas',
+            count: attendanceToday.kelas,
+            fill: 'var(--color-kelas)',
+        },
+    ];
     useAutoRefresh(!isOutOfYear, 5000);
 
     // Export Form 1: Presensi Kelas (Siswa)
@@ -129,20 +173,24 @@ export default function AdminDashboard({
     const [exporting2, setExporting2] = useState(false);
     const guruRef2 = useRef<HTMLDivElement>(null);
 
-    const allKelasSelected1 = kelasIds1.length === kelasList.length && kelasList.length > 0;
-    const allGuruSelected2 = guruIds2.length === gurus.filter(g => g.guru).length && gurus.filter(g => g.guru).length > 0;
+    const allKelasSelected1 =
+        kelasIds1.length === kelasList.length && kelasList.length > 0;
+    const allGuruSelected2 =
+        guruIds2.length === gurus.length && gurus.length > 0;
 
-    const filteredKelas1 = kelasList.filter(k =>
-        (k.full_nama_kelas ?? k.nama_kelas).toLowerCase().includes(kelasSearch1.toLowerCase())
+    const filteredKelas1 = kelasList.filter((k) =>
+        (k.full_nama_kelas ?? k.nama_kelas)
+            .toLowerCase()
+            .includes(kelasSearch1.toLowerCase()),
     );
 
-    const filteredGurus2 = gurus.filter(g =>
-        g.nama.toLowerCase().includes(guruSearch2.toLowerCase())
+    const filteredGurus2 = gurus.filter((g) =>
+        g.nama.toLowerCase().includes(guruSearch2.toLowerCase()),
     );
 
     const toggleKelas1 = (id: string) => {
-        setKelasIds1(prev =>
-            prev.includes(id) ? prev.filter(v => v !== id) : [...prev, id]
+        setKelasIds1((prev) =>
+            prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id],
         );
         setKelasOpen1(false);
     };
@@ -151,14 +199,15 @@ export default function AdminDashboard({
         if (allKelasSelected1) {
             setKelasIds1([]);
         } else {
-            setKelasIds1(kelasList.map(k => k.id.toString()));
+            setKelasIds1(kelasList.map((k) => k.id.toString()));
         }
+
         setKelasOpen1(false);
     };
 
     const toggleGuru2 = (id: string) => {
-        setGuruIds2(prev =>
-            prev.includes(id) ? prev.filter(v => v !== id) : [...prev, id]
+        setGuruIds2((prev) =>
+            prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id],
         );
         setGuruOpen2(false);
     };
@@ -167,49 +216,80 @@ export default function AdminDashboard({
         if (allGuruSelected2) {
             setGuruIds2([]);
         } else {
-            setGuruIds2(gurus.filter(g => g.guru).map(g => g.id.toString()));
+            setGuruIds2(gurus.map((g) => g.id.toString()));
         }
+
         setGuruOpen2(false);
     };
 
     const handleExport1 = async () => {
         if (kelasIds1.length === 0) {
             toast.error('Silakan pilih Kelas untuk ekspor.');
+
             return;
         }
-        if (activeYear && ((startDate1 && (startDate1 < activeYear.start || startDate1 > activeYear.end)) || (endDate1 && (endDate1 < activeYear.start || endDate1 > activeYear.end)))) {
-            toast.error(`Rentang ekspor harus dalam tahun ajaran aktif ${activeYear.tahun_awal}/${activeYear.tahun_akhir}.`);
+
+        if (
+            activeYear &&
+            ((startDate1 &&
+                (startDate1 < activeYear.start ||
+                    startDate1 > activeYear.end)) ||
+                (endDate1 &&
+                    (endDate1 < activeYear.start || endDate1 > activeYear.end)))
+        ) {
+            toast.error(
+                `Rentang ekspor harus dalam tahun ajaran aktif ${activeYear.tahun_awal}/${activeYear.tahun_akhir}.`,
+            );
+
             return;
         }
 
         const params = new URLSearchParams();
         params.set('type', 'kelas');
-        kelasIds1.forEach(id => params.append('kelas_ids[]', id));
-        if (startDate1) params.set('start_date', startDate1);
-        if (endDate1) params.set('end_date', endDate1);
+        kelasIds1.forEach((id) => params.append('kelas_ids[]', id));
+
+        if (startDate1) {
+            params.set('start_date', startDate1);
+        }
+
+        if (endDate1) {
+            params.set('end_date', endDate1);
+        }
 
         setExporting1(true);
+
         try {
-            const response = await fetch(`${window.location.origin}/guru/export/download?${params.toString()}`, {
-                headers: { Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel, application/json, text/html, */*' },
-                credentials: 'same-origin',
-            });
+            const response = await fetch(
+                `${window.location.origin}/guru/export/download?${params.toString()}`,
+                {
+                    headers: {
+                        Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel, application/json, text/html, */*',
+                    },
+                    credentials: 'same-origin',
+                },
+            );
 
             if (!response.ok) {
-                const text = await response.text();
+                await response.text();
                 toast.error('Gagal mengunduh file ekspor.');
+
                 return;
             }
 
             const blob = await response.blob();
+
             if (blob.size < 100) {
                 toast.error('Data kosong untuk filter ini.');
+
                 return;
             }
 
-            const disposition = response.headers.get('Content-Disposition') || '';
+            const disposition =
+                response.headers.get('Content-Disposition') || '';
             const filenameMatch = disposition.match(/filename="?([^";\n]+)"?/);
-            const filename = filenameMatch ? filenameMatch[1] : 'rekap-presensi-kelas.xlsx';
+            const filename = filenameMatch
+                ? filenameMatch[1]
+                : 'rekap-presensi-kelas.xlsx';
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -229,41 +309,71 @@ export default function AdminDashboard({
     const handleExport2 = async () => {
         if (guruIds2.length === 0) {
             toast.error('Silakan pilih Guru untuk ekspor.');
+
             return;
         }
-        if (activeYear && ((startDate2 && (startDate2 < activeYear.start || startDate2 > activeYear.end)) || (endDate2 && (endDate2 < activeYear.start || endDate2 > activeYear.end)))) {
-            toast.error(`Rentang ekspor harus dalam tahun ajaran aktif ${activeYear.tahun_awal}/${activeYear.tahun_akhir}.`);
+
+        if (
+            activeYear &&
+            ((startDate2 &&
+                (startDate2 < activeYear.start ||
+                    startDate2 > activeYear.end)) ||
+                (endDate2 &&
+                    (endDate2 < activeYear.start || endDate2 > activeYear.end)))
+        ) {
+            toast.error(
+                `Rentang ekspor harus dalam tahun ajaran aktif ${activeYear.tahun_awal}/${activeYear.tahun_akhir}.`,
+            );
+
             return;
         }
 
         const params = new URLSearchParams();
         params.set('type', 'guru');
-        guruIds2.forEach(id => params.append('guru_ids[]', id));
-        if (startDate2) params.set('start_date', startDate2);
-        if (endDate2) params.set('end_date', endDate2);
+        guruIds2.forEach((id) => params.append('guru_ids[]', id));
+
+        if (startDate2) {
+            params.set('start_date', startDate2);
+        }
+
+        if (endDate2) {
+            params.set('end_date', endDate2);
+        }
 
         setExporting2(true);
+
         try {
-            const response = await fetch(`${window.location.origin}/guru/export/download?${params.toString()}`, {
-                headers: { Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel, application/json, text/html, */*' },
-                credentials: 'same-origin',
-            });
+            const response = await fetch(
+                `${window.location.origin}/guru/export/download?${params.toString()}`,
+                {
+                    headers: {
+                        Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel, application/json, text/html, */*',
+                    },
+                    credentials: 'same-origin',
+                },
+            );
 
             if (!response.ok) {
-                const text = await response.text();
+                await response.text();
                 toast.error('Gagal mengunduh file ekspor.');
+
                 return;
             }
 
             const blob = await response.blob();
+
             if (blob.size < 100) {
                 toast.error('Data kosong untuk filter ini.');
+
                 return;
             }
 
-            const disposition = response.headers.get('Content-Disposition') || '';
+            const disposition =
+                response.headers.get('Content-Disposition') || '';
             const filenameMatch = disposition.match(/filename="?([^";\n]+)"?/);
-            const filename = filenameMatch ? filenameMatch[1] : 'rekap-presensi-guru.xlsx';
+            const filename = filenameMatch
+                ? filenameMatch[1]
+                : 'rekap-presensi-guru.xlsx';
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -287,29 +397,16 @@ export default function AdminDashboard({
         router.get(
             adminDashboard.url(),
             { tanggal: newDate },
-            { preserveState: true, preserveScroll: true }
+            { preserveState: true, preserveScroll: true },
         );
     };
 
     const openStatistik = (status: string) => {
-        router.get(`/admin/statistik/${status}`, { tanggal: statDate }, { preserveState: false });
-    };
-
-    const StatusBadge = ({ status }: { status: string }) => {
-        switch (status) {
-            case 'hadir':
-                return <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-500/20"><CheckCircle className="h-3 w-3" /> Hadir</span>;
-            case 'sakit':
-                return <span className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-600/20 dark:bg-blue-500/10 dark:text-blue-400 dark:ring-blue-500/20"><Clock className="h-3 w-3" /> Sakit</span>;
-            case 'izin':
-                return <span className="inline-flex items-center gap-1 rounded-md bg-orange-50 px-2 py-1 text-xs font-medium text-orange-700 ring-1 ring-inset ring-orange-600/20 dark:bg-orange-500/10 dark:text-orange-400 dark:ring-orange-500/20"><FileWarning className="h-3 w-3" /> Izin</span>;
-            case 'alpha':
-                return <span className="inline-flex items-center gap-1 rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/20 dark:bg-red-500/10 dark:text-red-400 dark:ring-red-500/20"><XCircle className="h-3 w-3" /> Alfa</span>;
-            case 'dispensasi':
-                return <span className="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-700 ring-1 ring-inset ring-indigo-600/20 dark:bg-indigo-500/10 dark:text-indigo-400 dark:ring-indigo-500/20"><Award className="h-3 w-3" /> Dispensasi</span>;
-            default:
-                return <span>{status}</span>;
-        }
+        router.get(
+            `/admin/statistik/${status}`,
+            { tanggal: statDate },
+            { preserveState: false },
+        );
     };
 
     return (
@@ -335,7 +432,9 @@ export default function AdminDashboard({
                             <p className="text-xs font-medium text-muted-foreground">
                                 Total Siswa
                             </p>
-                            <h3 className="text-xl font-bold">{stats.total_siswa}</h3>
+                            <h3 className="text-xl font-bold">
+                                {stats.total_siswa}
+                            </h3>
                         </div>
                     </div>
 
@@ -348,7 +447,9 @@ export default function AdminDashboard({
                             <p className="text-xs font-medium text-muted-foreground">
                                 Total Kelas
                             </p>
-                            <h3 className="text-xl font-bold">{stats.total_kelas}</h3>
+                            <h3 className="text-xl font-bold">
+                                {stats.total_kelas}
+                            </h3>
                         </div>
                     </div>
 
@@ -361,7 +462,9 @@ export default function AdminDashboard({
                             <p className="text-xs font-medium text-muted-foreground">
                                 Total Guru
                             </p>
-                            <h3 className="text-xl font-bold">{stats.total_guru}</h3>
+                            <h3 className="text-xl font-bold">
+                                {stats.total_guru}
+                            </h3>
                         </div>
                     </div>
 
@@ -374,7 +477,9 @@ export default function AdminDashboard({
                             <p className="text-xs font-medium text-muted-foreground">
                                 Total Admin
                             </p>
-                            <h3 className="text-xl font-bold">{stats.total_admin}</h3>
+                            <h3 className="text-xl font-bold">
+                                {stats.total_admin}
+                            </h3>
                         </div>
                     </div>
                 </div>
@@ -384,34 +489,46 @@ export default function AdminDashboard({
                     {/* Form 1: Ekspor Presensi Kelas */}
                     <div className="rounded-xl border border-sidebar-border/70 bg-card p-4 shadow-sm dark:border-sidebar-border">
                         <h2 className="mb-3 flex items-center gap-2 text-base font-semibold">
-                            <FileSpreadsheet className="h-4 w-4 text-emerald-600" /> Ekspor Presensi Kelas
+                            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />{' '}
+                            Ekspor Presensi Kelas
                         </h2>
 
                         <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-end">
                             <div className="space-y-1">
-                                <label className="text-xs font-medium text-muted-foreground">Pilih Kelas</label>
-                                <div ref={kelasRef1} className="relative w-full md:w-[220px]">
+                                <label className="text-xs font-medium text-muted-foreground">
+                                    Pilih Kelas
+                                </label>
+                                <div
+                                    ref={kelasRef1}
+                                    className="relative w-full md:w-[220px]"
+                                >
                                     <button
                                         type="button"
-                                        onClick={() => setKelasOpen1(!kelasOpen1)}
+                                        onClick={() =>
+                                            setKelasOpen1(!kelasOpen1)
+                                        }
                                         className="flex h-9 w-full min-w-0 items-center justify-between gap-2 rounded-md border border-input bg-muted/30 px-3 py-1 text-xs leading-tight shadow-sm transition-colors focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none sm:text-sm"
                                     >
                                         <span className="min-w-0 flex-1 truncate text-left text-xs leading-tight sm:text-sm">
                                             {kelasIds1.length === 0
                                                 ? 'Pilih Kelas'
                                                 : allKelasSelected1
-                                                    ? 'Semua Kelas'
-                                                    : `${kelasIds1.length} kelas dipilih`}
+                                                  ? 'Semua Kelas'
+                                                  : `${kelasIds1.length} kelas dipilih`}
                                         </span>
                                         <ChevronDown className="size-4 shrink-0 opacity-50" />
                                     </button>
                                     {kelasOpen1 && (
-                                        <div className="bg-popover text-popover-foreground absolute z-[100] mt-1 w-full origin-top overflow-hidden rounded-md border shadow-md">
+                                        <div className="absolute z-[100] mt-1 w-full origin-top overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md">
                                             <div className="flex items-center gap-2 border-b px-3 py-2">
                                                 <Search className="size-4 shrink-0 opacity-50" />
                                                 <input
                                                     value={kelasSearch1}
-                                                    onChange={(e) => setKelasSearch1(e.target.value)}
+                                                    onChange={(e) =>
+                                                        setKelasSearch1(
+                                                            e.target.value,
+                                                        )
+                                                    }
                                                     placeholder="Cari kelas..."
                                                     className="flex-1 bg-transparent text-xs outline-none placeholder:text-muted-foreground sm:text-sm"
                                                 />
@@ -420,11 +537,17 @@ export default function AdminDashboard({
                                                 <label className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-xs hover:bg-accent sm:text-sm">
                                                     <input
                                                         type="checkbox"
-                                                        checked={allKelasSelected1}
-                                                        onChange={toggleAllKelas1}
+                                                        checked={
+                                                            allKelasSelected1
+                                                        }
+                                                        onChange={
+                                                            toggleAllKelas1
+                                                        }
                                                         className="size-4 shrink-0"
                                                     />
-                                                    <span className="font-medium">Semua Kelas</span>
+                                                    <span className="font-medium">
+                                                        Semua Kelas
+                                                    </span>
                                                 </label>
                                                 {filteredKelas1.length === 0 ? (
                                                     <p className="px-2 py-6 text-center text-xs text-muted-foreground sm:text-sm">
@@ -432,14 +555,26 @@ export default function AdminDashboard({
                                                     </p>
                                                 ) : (
                                                     filteredKelas1.map((k) => (
-                                                        <label key={k.id} className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-xs hover:bg-accent sm:text-sm">
+                                                        <label
+                                                            key={k.id}
+                                                            className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-xs hover:bg-accent sm:text-sm"
+                                                        >
                                                             <input
                                                                 type="checkbox"
-                                                                checked={kelasIds1.includes(k.id.toString())}
-                                                                onChange={() => toggleKelas1(k.id.toString())}
+                                                                checked={kelasIds1.includes(
+                                                                    k.id.toString(),
+                                                                )}
+                                                                onChange={() =>
+                                                                    toggleKelas1(
+                                                                        k.id.toString(),
+                                                                    )
+                                                                }
                                                                 className="size-4 shrink-0"
                                                             />
-                                                            <span className="flex-1 break-words whitespace-normal leading-snug">{k.full_nama_kelas ?? k.nama_kelas}</span>
+                                                            <span className="flex-1 leading-snug break-words whitespace-normal">
+                                                                {k.full_nama_kelas ??
+                                                                    k.nama_kelas}
+                                                            </span>
                                                         </label>
                                                     ))
                                                 )}
@@ -450,11 +585,15 @@ export default function AdminDashboard({
                             </div>
 
                             <div className="space-y-1">
-                                <label className="text-xs font-medium text-muted-foreground">Tanggal Mulai</label>
+                                <label className="text-xs font-medium text-muted-foreground">
+                                    Tanggal Mulai
+                                </label>
                                 <Input
                                     type="date"
                                     value={startDate1}
-                                    onChange={(e) => setStartDate1(e.target.value)}
+                                    onChange={(e) =>
+                                        setStartDate1(e.target.value)
+                                    }
                                     className="h-9 w-full bg-muted/30 md:w-[170px]"
                                     min={activeYear?.start}
                                     max={activeYear?.end}
@@ -462,11 +601,15 @@ export default function AdminDashboard({
                             </div>
 
                             <div className="space-y-1">
-                                <label className="text-xs font-medium text-muted-foreground">Tanggal Selesai</label>
+                                <label className="text-xs font-medium text-muted-foreground">
+                                    Tanggal Selesai
+                                </label>
                                 <Input
                                     type="date"
                                     value={endDate1}
-                                    onChange={(e) => setEndDate1(e.target.value)}
+                                    onChange={(e) =>
+                                        setEndDate1(e.target.value)
+                                    }
                                     className="h-9 w-full bg-muted/30 md:w-[170px]"
                                     min={activeYear?.start}
                                     max={activeYear?.end}
@@ -478,7 +621,9 @@ export default function AdminDashboard({
                                 disabled={exporting1 || kelasIds1.length === 0}
                                 className="h-9 gap-2 px-6"
                             >
-                                {exporting1 ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                                {exporting1 ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : null}
                                 Ekspor
                             </Button>
                         </div>
@@ -487,13 +632,19 @@ export default function AdminDashboard({
                     {/* Form 2: Ekspor Presensi Guru */}
                     <div className="rounded-xl border border-sidebar-border/70 bg-card p-4 shadow-sm dark:border-sidebar-border">
                         <h2 className="mb-3 flex items-center gap-2 text-base font-semibold">
-                            <FileSpreadsheet className="h-4 w-4 text-blue-600" /> Ekspor Presensi Guru
+                            <FileSpreadsheet className="h-4 w-4 text-blue-600" />{' '}
+                            Ekspor Presensi Guru
                         </h2>
 
                         <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-end">
                             <div className="space-y-1">
-                                <label className="text-xs font-medium text-muted-foreground">Pilih Guru</label>
-                                <div ref={guruRef2} className="relative w-full md:w-[220px]">
+                                <label className="text-xs font-medium text-muted-foreground">
+                                    Pilih Guru
+                                </label>
+                                <div
+                                    ref={guruRef2}
+                                    className="relative w-full md:w-[220px]"
+                                >
                                     <button
                                         type="button"
                                         onClick={() => setGuruOpen2(!guruOpen2)}
@@ -503,18 +654,22 @@ export default function AdminDashboard({
                                             {guruIds2.length === 0
                                                 ? 'Pilih Guru'
                                                 : allGuruSelected2
-                                                    ? 'Semua Guru'
-                                                    : `${guruIds2.length} guru dipilih`}
+                                                  ? 'Semua Guru'
+                                                  : `${guruIds2.length} guru dipilih`}
                                         </span>
                                         <ChevronDown className="size-4 shrink-0 opacity-50" />
                                     </button>
                                     {guruOpen2 && (
-                                        <div className="bg-popover text-popover-foreground absolute z-[100] mt-1 w-full origin-top overflow-hidden rounded-md border shadow-md">
+                                        <div className="absolute z-[100] mt-1 w-full origin-top overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md">
                                             <div className="flex items-center gap-2 border-b px-3 py-2">
                                                 <Search className="size-4 shrink-0 opacity-50" />
                                                 <input
                                                     value={guruSearch2}
-                                                    onChange={(e) => setGuruSearch2(e.target.value)}
+                                                    onChange={(e) =>
+                                                        setGuruSearch2(
+                                                            e.target.value,
+                                                        )
+                                                    }
                                                     placeholder="Cari guru..."
                                                     className="flex-1 bg-transparent text-xs outline-none placeholder:text-muted-foreground sm:text-sm"
                                                 />
@@ -523,11 +678,17 @@ export default function AdminDashboard({
                                                 <label className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-xs hover:bg-accent sm:text-sm">
                                                     <input
                                                         type="checkbox"
-                                                        checked={allGuruSelected2}
-                                                        onChange={toggleAllGuru2}
+                                                        checked={
+                                                            allGuruSelected2
+                                                        }
+                                                        onChange={
+                                                            toggleAllGuru2
+                                                        }
                                                         className="size-4 shrink-0"
                                                     />
-                                                    <span className="font-medium">Semua Guru</span>
+                                                    <span className="font-medium">
+                                                        Semua Guru
+                                                    </span>
                                                 </label>
                                                 {filteredGurus2.length === 0 ? (
                                                     <p className="px-2 py-6 text-center text-xs text-muted-foreground sm:text-sm">
@@ -535,14 +696,25 @@ export default function AdminDashboard({
                                                     </p>
                                                 ) : (
                                                     filteredGurus2.map((g) => (
-                                                        <label key={g.id} className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-xs hover:bg-accent sm:text-sm">
+                                                        <label
+                                                            key={g.id}
+                                                            className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-xs hover:bg-accent sm:text-sm"
+                                                        >
                                                             <input
                                                                 type="checkbox"
-                                                                checked={guruIds2.includes(g.id.toString())}
-                                                                onChange={() => toggleGuru2(g.id.toString())}
+                                                                checked={guruIds2.includes(
+                                                                    g.id.toString(),
+                                                                )}
+                                                                onChange={() =>
+                                                                    toggleGuru2(
+                                                                        g.id.toString(),
+                                                                    )
+                                                                }
                                                                 className="size-4 shrink-0"
                                                             />
-                                                            <span className="flex-1 break-words whitespace-normal leading-snug">{g.nama} ({g.nip || '-'})</span>
+                                                            <span className="flex-1 leading-snug break-words whitespace-normal">
+                                                                {g.nama}
+                                                            </span>
                                                         </label>
                                                     ))
                                                 )}
@@ -553,11 +725,15 @@ export default function AdminDashboard({
                             </div>
 
                             <div className="space-y-1">
-                                <label className="text-xs font-medium text-muted-foreground">Tanggal Mulai</label>
+                                <label className="text-xs font-medium text-muted-foreground">
+                                    Tanggal Mulai
+                                </label>
                                 <Input
                                     type="date"
                                     value={startDate2}
-                                    onChange={(e) => setStartDate2(e.target.value)}
+                                    onChange={(e) =>
+                                        setStartDate2(e.target.value)
+                                    }
                                     className="h-9 w-full bg-muted/30 md:w-[170px]"
                                     min={activeYear?.start}
                                     max={activeYear?.end}
@@ -565,11 +741,15 @@ export default function AdminDashboard({
                             </div>
 
                             <div className="space-y-1">
-                                <label className="text-xs font-medium text-muted-foreground">Tanggal Selesai</label>
+                                <label className="text-xs font-medium text-muted-foreground">
+                                    Tanggal Selesai
+                                </label>
                                 <Input
                                     type="date"
                                     value={endDate2}
-                                    onChange={(e) => setEndDate2(e.target.value)}
+                                    onChange={(e) =>
+                                        setEndDate2(e.target.value)
+                                    }
                                     className="h-9 w-full bg-muted/30 md:w-[170px]"
                                     min={activeYear?.start}
                                     max={activeYear?.end}
@@ -581,130 +761,195 @@ export default function AdminDashboard({
                                 disabled={exporting2 || guruIds2.length === 0}
                                 className="h-9 gap-2 px-6"
                             >
-                                {exporting2 ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                                {exporting2 ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : null}
                                 Ekspor
                             </Button>
                         </div>
                     </div>
                 </div>
 
-                    {/* Attendance Chart + Distribusi Siswa per Kelas */}
-                    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 mt-2">
-                        {/* Attendance Chart */}
-                        <Card className="border-sidebar-border/70 shadow-sm dark:border-sidebar-border flex flex-col">
-                            <CardHeader className="flex flex-row items-center gap-2 pb-2">
-                                <PieChartIcon className="h-5 w-5 text-muted-foreground" />
-                                <div className="flex-1">
-                                    <CardTitle className="text-lg">Statistik Presensi</CardTitle>
-                                    <CardDescription>Klik status untuk melihat detail siswa</CardDescription>
-                                </div>
-                                <Input
-                                    type="date"
-                                    value={statDate}
-                                    onChange={e => handleStatDateChange(e.target.value)}
-                                    className="w-[170px] h-8 text-xs"
-                                />
-                            </CardHeader>
-                            <CardContent className="flex-1 flex flex-col">
-                                {attendanceData.reduce((sum, item) => sum + item.count, 0) > 0 ? (
-                                    <>
-                                        <ChartContainer config={attendanceConfig} className="mx-auto aspect-square max-h-[220px] mb-2">
-                                            <PieChart>
-                                                <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
-                                                <Pie
-                                                    data={attendanceData}
-                                                    dataKey="count"
-                                                    nameKey="status"
-                                                    innerRadius={50}
-                                                    outerRadius={70}
-                                                    paddingAngle={5}
-                                                    strokeWidth={2}
-                                                >
-                                                    {attendanceData.map((entry, index) => (
-                                                        <Cell key={`cell-${index}`} fill={entry.fill} />
-                                                    ))}
-                                                </Pie>
-                                            </PieChart>
-                                        </ChartContainer>
-                                        <div className="mt-2 grid grid-cols-3 gap-1.5 text-center">
-                                            {gridData.map((item) => (
-                                                <button 
-                                                    key={item.status} 
-                                                    className="flex flex-col items-center gap-0.5 p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-all cursor-pointer"
-                                                    onClick={() => openStatistik(item.status)}
-                                                    title={`Klik buka halaman ${item.status} — terbaru per siswa`}
-                                                >
-                                                    <div className="flex items-center justify-center gap-1">
-                                                        <div
-                                                            className="h-2 w-2 rounded-full"
-                                                            style={{
-                                                                backgroundColor:
-                                                                    item.status === 'hadir' ? 'var(--chart-2)' :
-                                                                    item.status === 'sakit' ? 'var(--chart-4)' :
-                                                                    item.status === 'izin' ? 'var(--chart-1)' :
-                                                                    item.status === 'kelas' ? 'var(--chart-3)' :
-                                                                    item.status === 'dispensasi' ? 'var(--chart-5)' :
-                                                                    'var(--destructive)',
-                                                            }}
+                {/* Attendance Chart + Distribusi Siswa per Kelas */}
+                <div className="mt-2 grid grid-cols-1 gap-6 lg:grid-cols-2">
+                    {/* Attendance Chart */}
+                    <Card className="flex flex-col border-sidebar-border/70 shadow-sm dark:border-sidebar-border">
+                        <CardHeader className="flex flex-row items-center gap-2 pb-2">
+                            <PieChartIcon className="h-5 w-5 text-muted-foreground" />
+                            <div className="flex-1">
+                                <CardTitle className="text-lg">
+                                    Statistik Presensi
+                                </CardTitle>
+                                <CardDescription>
+                                    Klik status untuk melihat detail siswa
+                                </CardDescription>
+                            </div>
+                            <Input
+                                type="date"
+                                value={statDate}
+                                onChange={(e) =>
+                                    handleStatDateChange(e.target.value)
+                                }
+                                className="h-8 w-[170px] text-xs"
+                            />
+                        </CardHeader>
+                        <CardContent className="flex flex-1 flex-col">
+                            {attendanceData.reduce(
+                                (sum, item) => sum + item.count,
+                                0,
+                            ) > 0 ? (
+                                <>
+                                    <ChartContainer
+                                        config={attendanceConfig}
+                                        className="mx-auto mb-2 aspect-square max-h-[220px]"
+                                    >
+                                        <PieChart>
+                                            <ChartTooltip
+                                                cursor={false}
+                                                content={
+                                                    <ChartTooltipContent
+                                                        hideLabel
+                                                    />
+                                                }
+                                            />
+                                            <Pie
+                                                data={attendanceData}
+                                                dataKey="count"
+                                                nameKey="status"
+                                                innerRadius={50}
+                                                outerRadius={70}
+                                                paddingAngle={5}
+                                                strokeWidth={2}
+                                            >
+                                                {attendanceData.map(
+                                                    (entry, index) => (
+                                                        <Cell
+                                                            key={`cell-${index}`}
+                                                            fill={entry.fill}
                                                         />
-                                                        <span className="text-[9px] font-bold uppercase text-muted-foreground tracking-wider">
-                                                            {item.status}
-                                                        </span>
-                                                    </div>
-                                                    <span className="text-base font-bold">{item.count}</span>
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </>
-                                ) : (
-                                    <div className="flex flex-col items-center justify-center h-[300px] text-muted-foreground">
-                                        <PieChartIcon className="h-12 w-12 opacity-20 mb-3" />
-                                        <p>Belum ada data presensi pada tanggal ini.</p>
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
-
-                        {/* Distribusi Siswa per Kelas */}
-                        <Card className="border-sidebar-border/70 shadow-sm dark:border-sidebar-border flex flex-col">
-                            <CardHeader className="flex flex-row items-center gap-2 pb-2">
-                                <Activity className="h-5 w-5 text-muted-foreground" />
-                                <div>
-                                    <CardTitle className="text-lg">Distribusi Siswa per Kelas</CardTitle>
-                                    <CardDescription>Jumlah siswa per kelas</CardDescription>
-                                </div>
-                            </CardHeader>
-                            <CardContent className="flex-1">
-                                {studentsPerKelas.length > 0 ? (
-                                    <ChartContainer config={kelasConfig} className="h-[240px] w-full mt-2">
-                                        <BarChart data={studentsPerKelas} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                            <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                                            <XAxis
-                                                dataKey="nama_kelas"
-                                                tickLine={false}
-                                                axisLine={false}
-                                                tickMargin={8}
-                                                fontSize={12}
-                                            />
-                                            <YAxis
-                                                tickLine={false}
-                                                axisLine={false}
-                                                tickMargin={8}
-                                                fontSize={12}
-                                            />
-                                            <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
-                                            <Bar dataKey="count" fill="var(--chart-3)" radius={[4, 4, 0, 0]} />
-                                        </BarChart>
+                                                    ),
+                                                )}
+                                            </Pie>
+                                        </PieChart>
                                     </ChartContainer>
-                                ) : (
-                                    <div className="flex flex-col items-center justify-center h-[240px] text-muted-foreground">
-                                        <PieChartIcon className="h-12 w-12 opacity-20 mb-3" />
-                                        <p>Belum ada data distribusi siswa per kelas</p>
+                                    <div className="mt-2 grid grid-cols-2 gap-1.5 text-center">
+                                        {gridData.map((item) => (
+                                            <button
+                                                key={item.status}
+                                                className="flex cursor-pointer flex-col items-center gap-0.5 rounded-lg border border-gray-200 p-1.5 shadow-sm transition-all hover:shadow-md dark:border-gray-700"
+                                                onClick={() =>
+                                                    openStatistik(item.status)
+                                                }
+                                                title={`Klik buka halaman ${item.status} — terbaru per siswa`}
+                                            >
+                                                <div className="flex items-center justify-center gap-1">
+                                                    <div
+                                                        className="h-2 w-2 rounded-full"
+                                                        style={{
+                                                            backgroundColor:
+                                                                item.status ===
+                                                                'hadir'
+                                                                    ? 'var(--chart-2)'
+                                                                    : item.status ===
+                                                                        'sakit'
+                                                                      ? 'var(--chart-4)'
+                                                                      : item.status ===
+                                                                          'izin'
+                                                                        ? 'var(--chart-1)'
+                                                                        : 'var(--chart-3)',
+                                                        }}
+                                                    />
+                                                    <span className="text-[9px] font-bold tracking-wider text-muted-foreground uppercase">
+                                                        {item.status}
+                                                    </span>
+                                                </div>
+                                                <span className="text-base font-bold">
+                                                    {item.count}
+                                                </span>
+                                            </button>
+                                        ))}
                                     </div>
-                                )}
-                            </CardContent>
-                        </Card>
-                    </div>
+                                </>
+                            ) : (
+                                <div className="flex h-[300px] flex-col items-center justify-center text-muted-foreground">
+                                    <PieChartIcon className="mb-3 h-12 w-12 opacity-20" />
+                                    <p>
+                                        Belum ada data presensi pada tanggal
+                                        ini.
+                                    </p>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+
+                    {/* Distribusi Siswa per Kelas */}
+                    <Card className="flex flex-col border-sidebar-border/70 shadow-sm dark:border-sidebar-border">
+                        <CardHeader className="flex flex-row items-center gap-2 pb-2">
+                            <Activity className="h-5 w-5 text-muted-foreground" />
+                            <div>
+                                <CardTitle className="text-lg">
+                                    Distribusi Siswa per Kelas
+                                </CardTitle>
+                                <CardDescription>
+                                    Jumlah siswa per kelas
+                                </CardDescription>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="flex-1">
+                            {studentsPerKelas.length > 0 ? (
+                                <ChartContainer
+                                    config={kelasConfig}
+                                    className="mt-2 h-[240px] w-full"
+                                >
+                                    <BarChart
+                                        data={studentsPerKelas}
+                                        margin={{
+                                            top: 10,
+                                            right: 10,
+                                            left: -20,
+                                            bottom: 0,
+                                        }}
+                                    >
+                                        <CartesianGrid
+                                            vertical={false}
+                                            strokeDasharray="3 3"
+                                        />
+                                        <XAxis
+                                            dataKey="nama_kelas"
+                                            tickLine={false}
+                                            axisLine={false}
+                                            tickMargin={8}
+                                            fontSize={12}
+                                        />
+                                        <YAxis
+                                            tickLine={false}
+                                            axisLine={false}
+                                            tickMargin={8}
+                                            fontSize={12}
+                                        />
+                                        <ChartTooltip
+                                            cursor={false}
+                                            content={<ChartTooltipContent />}
+                                        />
+                                        <Bar
+                                            dataKey="count"
+                                            fill="var(--chart-3)"
+                                            radius={[4, 4, 0, 0]}
+                                        />
+                                    </BarChart>
+                                </ChartContainer>
+                            ) : (
+                                <div className="flex h-[240px] flex-col items-center justify-center text-muted-foreground">
+                                    <PieChartIcon className="mb-3 h-12 w-12 opacity-20" />
+                                    <p>
+                                        Belum ada data distribusi siswa per
+                                        kelas
+                                    </p>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </div>
             </div>
         </>
     );

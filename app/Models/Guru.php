@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
 
-#[Fillable(['user_id', 'nip', 'nama', 'jenis_kelamin'])]
+#[Fillable(['user_id', 'nama', 'jenis_kelamin'])]
 class Guru extends Model
 {
     protected $appends = ['foto_url'];
