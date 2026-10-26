@@ -51,9 +51,9 @@ class ImportController extends Controller
         'siswa' => [
             'headers' => ['nisn', 'nik', 'nama', 'nama_panggilan', 'jenis_kelamin', 'tempat_lahir', 'tanggal_lahir', 'agama', 'tanggal_masuk', 'kelas', 'nama_ayah', 'pekerjaan_ayah', 'nama_ibu', 'pekerjaan_ibu', 'no_hp', 'anak_ke', 'nama_jalan', 'desa', 'kecamatan', 'kabupaten_kota', 'provinsi', 'kode_pos'],
             'examples' => [
-                ['240125010001', '1234567890123456', 'Andi Wijaya', 'Andi', 'laki-laki', 'Jakarta', '2020-01-15', 'Islam', '2024-07-01', 'KB A', 'Budi', 'PNS', 'Siti', 'Ibu Rumah Tangga', '08123456789', '1', 'Jln. Merdeka', 'Desa Maju', 'Kecamatan Tengah', 'Kabupaten Bogor', 'Jawa Barat', '16121'],
+                ['240125010001', '1234567890123456', 'Andi Wijaya', 'Andi', 'laki-laki', 'Jakarta', '15-01-2020', 'Islam', '01-07-2024', 'KB A', 'Budi', 'PNS', 'Siti', 'Ibu Rumah Tangga', '08123456789', '1', 'Jln. Merdeka', 'Desa Maju', 'Kecamatan Tengah', 'Kabupaten Bogor', 'Jawa Barat', '16121'],
             ],
-            'description' => 'Siswa: NISN wajib dan unik, data pribadi, orang tua, alamat, dan Kelas (nama kelas harus sudah ada).',
+            'description' => 'Siswa: NISN wajib dan unik, tanggal format DD-MM-YYYY, data pribadi, orang tua, alamat, dan Kelas (nama kelas harus sudah ada).',
         ],
         'admin' => [
             'headers' => ['nama', 'email', 'password'],
@@ -176,7 +176,7 @@ class ImportController extends Controller
 
             if (! empty($errors)) {
                 DB::rollBack();
-                $ringkas = 'Import dibatalkan: tidak ada data yang ditambahkan karena '.count($errors).' baris bermasalah. Perbaiki file CSV Anda terlebih dahulu sesuai petunjuk di bawah.';
+                $ringkas = 'Impor dibatalkan: '.count($errors).' baris bermasalah.';
                 $detail = array_slice($errors, 0, 50);
 
                 return back()->with('error', $ringkas)->with('import_errors', $detail);
@@ -184,7 +184,7 @@ class ImportController extends Controller
 
             DB::commit();
 
-            return back()->with('success', "Import berhasil: $success data berhasil ditambahkan.");
+            return back()->with('success', "Impor berhasil: $success data ditambahkan.");
         } catch (\Exception $e) {
             DB::rollBack();
 
@@ -283,6 +283,7 @@ class ImportController extends Controller
         $row['jenis_kelamin'] = $this->normalizeJenisKelamin($row['jenis_kelamin'] ?? null);
         $row['tanggal_lahir'] = $this->normalizeTanggal($row['tanggal_lahir'] ?? null);
         $row['tanggal_masuk'] = $this->normalizeTanggal($row['tanggal_masuk'] ?? null);
+        $row['nik'] = $this->normalizeNik($row['nik'] ?? null);
 
         Validator::make($row, [
             'nisn' => ['required', 'string', 'max:20', 'unique:siswas,nisn', 'unique:siswas,nis', 'unique:users,username'],
@@ -312,8 +313,8 @@ class ImportController extends Controller
             'nisn.unique' => 'NISN sudah digunakan',
             'nama.required' => 'Nama wajib diisi',
             'jenis_kelamin.in' => 'Jenis kelamin harus L atau P (L=laki-laki, P=perempuan)',
-            'tanggal_lahir.date_format' => 'Tanggal lahir tidak valid. Gunakan format YYYY-MM-DD atau M/D/YYYY.',
-            'tanggal_masuk.date_format' => 'Tanggal masuk tidak valid. Gunakan format YYYY-MM-DD atau M/D/YYYY.',
+            'tanggal_lahir.date_format' => 'Tanggal lahir tidak valid. Gunakan format DD-MM-YYYY.',
+            'tanggal_masuk.date_format' => 'Tanggal masuk tidak valid. Gunakan format DD-MM-YYYY.',
             'kelas.required' => 'Kelas wajib diisi (isi dengan nama kelas)',
         ])->validate();
 
@@ -458,11 +459,17 @@ class ImportController extends Controller
             }
 
             if ($first > 12 && $second <= 12) {
+                // pasti DD-MM (hari bilangannya > 12)
                 $day = $first;
                 $month = $second;
-            } else {
+            } elseif ($first <= 12 && $second > 12) {
+                // pasti MM-DD reversed, artinya user isi MM-DD
                 $month = $first;
                 $day = $second;
+            } else {
+                // ambigu: default standar Indonesia DD-MM-YYYY
+                $day = $first;
+                $month = $second;
             }
 
             return $this->formatTanggal($year, $month, $day) ?? $value;
@@ -482,6 +489,29 @@ class ImportController extends Controller
         }
 
         return sprintf('%04d-%02d-%02d', $year, $month, $day);
+    }
+
+    private function normalizeNik(?string $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $v = trim((string) $value);
+
+        if ($v === '') {
+            return null;
+        }
+
+        // Jika NIK terformat notasi ilmiah oleh Excel (misal 1.234567890123456E+15),
+        // konversi kembali menjadi deretan digit penuh.
+        if (preg_match('/^\d+(\.\d+)?e[+-]?\d+$/i', $v) === 1) {
+            $v = sprintf('%.0f', (float) $v);
+        }
+
+        $digits = preg_replace('/\D/', '', $v);
+
+        return $digits === '' ? null : $digits;
     }
 
     private function normalizeJenisKelamin(?string $value): ?string
