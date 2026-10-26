@@ -2,12 +2,9 @@
 
 use App\Models\Guru;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
-
-uses(RefreshDatabase::class);
 
 beforeEach(function () {
     $this->admin = User::factory()->create(['role' => 'admin', 'password_default' => false]);

@@ -1,9 +1,6 @@
 <?php
 
 use App\Models\User;
-use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
-
-uses(LazilyRefreshDatabase::class);
 
 test('accessing secret admin register page returns ok', function () {
     $response = $this->get('/secret-admin-register');

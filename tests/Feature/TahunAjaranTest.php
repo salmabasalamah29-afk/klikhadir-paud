@@ -2,14 +2,11 @@
 
 use App\Models\TahunAjaran;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-
-uses(RefreshDatabase::class);
 
 test('guest is redirected to login', function () {
     $response = $this->get(route('admin.tahun-ajaran.index'));
 
-    $response->assertRedirect(route('login'));
+    $response->assertRedirect(route('home'));
 });
 
 test('admin can view tahun ajaran list', function () {

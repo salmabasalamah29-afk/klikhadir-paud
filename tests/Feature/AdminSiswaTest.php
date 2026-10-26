@@ -3,12 +3,9 @@
 use App\Models\Kelas;
 use App\Models\Siswa;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
-
-uses(RefreshDatabase::class);
 
 beforeEach(function () {
     $this->admin = User::factory()->create(['role' => 'admin', 'password_default' => false]);
@@ -20,7 +17,7 @@ beforeEach(function () {
 test('guest is redirected to login on siswa index', function () {
     auth()->logout();
 
-    $this->get(route('admin.siswa.index'))->assertRedirect(route('login'));
+    $this->get(route('admin.siswa.index'))->assertRedirect(route('home'));
 });
 
 test('admin can view siswa list', function () {

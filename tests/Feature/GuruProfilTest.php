@@ -4,10 +4,7 @@ use App\Models\Guru;
 use App\Models\Kelas;
 use App\Models\Siswa;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
-
-uses(RefreshDatabase::class);
 
 test('guru can view his own profile page', function () {
     $user = User::factory()->create(['role' => 'guru', 'password_default' => false]);

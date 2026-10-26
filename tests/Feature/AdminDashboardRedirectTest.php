@@ -4,9 +4,6 @@ use App\Models\Guru;
 use App\Models\Kelas;
 use App\Models\Siswa;
 use App\Models\User;
-use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
-
-uses(LazilyRefreshDatabase::class);
 
 test('admin with false password_default can access admin dashboard directly', function () {
     $admin = User::factory()->create([

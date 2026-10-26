@@ -1,11 +1,8 @@
 <?php
 
 use App\Models\User;
-use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 use Laravel\Fortify\Features;
-
-uses(LazilyRefreshDatabase::class);
 
 beforeEach(function () {
     $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());

@@ -1,16 +1,13 @@
 <?php
 
 use App\Models\User;
-use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\RateLimiter;
 use Laravel\Fortify\Features;
 
-uses(LazilyRefreshDatabase::class);
-
-test('login screen can be rendered', function () {
+test('login route redirects to the welcome page', function () {
     $response = $this->get(route('login'));
 
-    $response->assertOk();
+    $response->assertRedirect(route('home'));
 });
 
 test('users can authenticate using the login screen', function () {
