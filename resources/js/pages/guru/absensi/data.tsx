@@ -8,7 +8,7 @@ import {
     Dialog,
     DialogContent,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
+import DateInput, { formatTanggalIndo } from '@/components/date-input';
 import SearchableSelect from '@/components/ui/searchable-select';
 import { useAutoRefresh } from '@/hooks/use-auto-refresh';
 import guruAbsensi from '@/routes/guru/absensi';
@@ -277,7 +277,7 @@ export default function GuruDataAbsensi({
         const nm = nama ? nama.toUpperCase().replace(/\s+/g, ' ').trim() : 'SISWA';
         // kelasNama sudah seperti "XII PPLG A"
         const kls = kelasNama ?? selectedKelas?.full_nama_kelas ?? '-';
-        const tgl = tanggal ?? filters.tanggal;
+        const tgl = formatTanggalIndo(tanggal ?? filters.tanggal);
         return `${jenis}-${nm}-${kls}-${tgl}`;
     };
 
@@ -299,7 +299,7 @@ export default function GuruDataAbsensi({
                             <div className="space-y-4">
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">Tanggal</label>
-                                    <Input type="date" value={filters.tanggal} className="bg-muted/30" min={activeYear?.start} max={activeYear?.end} onChange={(e) => handleFilterChange('tanggal', e.target.value)} />
+                                    <DateInput value={filters.tanggal} className="bg-muted/30" min={activeYear?.start} max={activeYear?.end} onChange={(iso) => handleFilterChange('tanggal', iso)} />
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">Kelas</label>
@@ -330,11 +330,11 @@ export default function GuruDataAbsensi({
                             <div className="space-y-2">
                                 <div className="space-y-1">
                                     <label className="text-xs font-medium">Tanggal Mulai</label>
-                                    <Input type="date" value={exportStartDate} onChange={e=>setExportStartDate(e.target.value)} className="bg-muted/30 h-9" min={activeYear?.start} max={activeYear?.end} />
+                                    <DateInput value={exportStartDate} onChange={(iso) => setExportStartDate(iso)} className="bg-muted/30" min={activeYear?.start} max={activeYear?.end} />
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-xs font-medium">Tanggal Selesai</label>
-                                    <Input type="date" value={exportEndDate} onChange={e=>setExportEndDate(e.target.value)} className="bg-muted/30 h-9" min={activeYear?.start} max={activeYear?.end} />
+                                    <DateInput value={exportEndDate} onChange={(iso) => setExportEndDate(iso)} className="bg-muted/30" min={activeYear?.start} max={activeYear?.end} />
                                 </div>
                                 <div className="pt-0.5">
                                     <Button onClick={handleExport} disabled={exporting || !filters.kelas_id} className="w-full h-9 gap-1.5" title={!filters.kelas_id ? 'Pilih kelas di filter atas' : `Export kelas ${selectedKelas?.full_nama_kelas ?? ''}`}><FileSpreadsheet className="h-4 w-4" /> {exporting ? <><Loader2 className="h-4 w-4 animate-spin" />...</> : 'Ekspor'}</Button>
@@ -358,7 +358,7 @@ export default function GuruDataAbsensi({
                                     <div className="rounded-xl border bg-card p-3 shadow-sm text-center"><p className="text-xs text-muted-foreground">Dispensasi</p><p className="text-xl font-bold text-indigo-600">{stats.dispensasi}</p></div>
                                 </div>
                                 <div className="flex flex-wrap gap-2 text-xs text-muted-foreground items-center">
-                                    <span className="inline-flex items-center gap-1 rounded-full border px-3 py-1 bg-muted/30"><Calendar className="h-3 w-3" /> {filters.tanggal}</span>
+                                    <span className="inline-flex items-center gap-1 rounded-full border px-3 py-1 bg-muted/30"><Calendar className="h-3 w-3" /> {formatTanggalIndo(filters.tanggal)}</span>
                                     <span className="inline-flex items-center gap-1 rounded-full border px-3 py-1 bg-muted/30"><GraduationCap className="h-3 w-3" /> {selectedKelas?.full_nama_kelas ?? '-'}</span>
                                     <span className="inline-flex items-center gap-1 rounded-full border px-3 py-1 bg-muted/30">total: {totalAbsensi} siswa</span>
                                     <span className="inline-flex items-center gap-1 rounded-full border px-3 py-1 bg-muted/30">terakhir diperbarui: {waktuUpdateDisplay}</span>
@@ -374,7 +374,7 @@ export default function GuruDataAbsensi({
                                             <span className="text-xs text-muted-foreground"> jam ke-{guruAktif.jam_ke} {guruAktif.waktu ? `(${guruAktif.waktu})` : ''}</span>
                                         </div>
                                     ) : (
-                                        <p className="text-xs text-muted-foreground">Belum ada pembaruan untuk kelas ini pada tanggal {filters.tanggal}.</p>
+                                        <p className="text-xs text-muted-foreground">Belum ada pembaruan untuk kelas ini pada tanggal {formatTanggalIndo(filters.tanggal)}.</p>
                                     )}
                                 </div>
 

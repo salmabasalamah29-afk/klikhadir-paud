@@ -51,6 +51,7 @@ interface Props {
     siswa: {
         id: number;
         nis: string;
+        nisn: string;
         nama: string;
         foto_url?: string | null;
         kelas: {
@@ -74,22 +75,18 @@ export default function SiswaDashboard({ siswa, stats, history, activeYear = nul
     useAutoRefresh(true, 6000, ['stats', 'history']);
     const hasKeterangan = history.some((r) => r.keterangan != null && r.keterangan.toString().trim() !== '');
     const hasSurat = history.some((r) => r.bukti != null && r.bukti.toString().trim() !== '');
-    const formatTanggal = (iso: string) => {
+    const formatTanggalLengkap = (iso: string) => {
         try {
             const d = new Date(iso.replace(' ', 'T'));
             if (isNaN(d.getTime())) return iso;
-            const dd = String(d.getDate()).padStart(2, '0');
-            const mm = String(d.getMonth() + 1).padStart(2, '0');
-            const yyyy = d.getFullYear();
-            return `${dd}-${mm}-${yyyy}`;
+            return d.toLocaleDateString('id-ID', {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+                timeZone: 'Asia/Jakarta',
+            });
         } catch { return iso; }
-    };
-    const formatHari = (iso: string) => {
-        try {
-            const d = new Date(iso.replace(' ', 'T'));
-            if (isNaN(d.getTime())) return '-';
-            return d.toLocaleDateString('id-ID', { weekday: 'long', timeZone: 'Asia/Jakarta' });
-        } catch { return '-'; }
     };
     const getSuratLabel = (status: string, tanggal?: string) => {
         const jenis = status ? status.charAt(0).toUpperCase() + status.slice(1) : 'Surat';
@@ -146,11 +143,11 @@ export default function SiswaDashboard({ siswa, stats, history, activeYear = nul
                         <h1 className="text-2xl font-bold tracking-tight">
                             {siswa.nama} — {siswa.kelas.full_nama_kelas || siswa.kelas.nama_kelas}
                         </h1>
-                        <p className="text-sm text-muted-foreground">NIS: {siswa.nis}</p>
+                        <p className="text-sm text-muted-foreground">NISN: {siswa.nisn}</p>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+                <div className="grid grid-cols-3 gap-3">
                     <Card className="border-emerald-200 bg-emerald-50 dark:border-emerald-900 dark:bg-emerald-950/20">
                         <CardContent className="p-3 text-center">
                             <p className="text-xs text-muted-foreground">Hadir</p>
@@ -171,20 +168,6 @@ export default function SiswaDashboard({ siswa, stats, history, activeYear = nul
                             <p className="text-xl font-bold text-orange-600">{stats.izin}</p>
                         </CardContent>
                     </Card>
-
-                    <Card className="border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/20">
-                        <CardContent className="p-3 text-center">
-                            <p className="text-xs text-muted-foreground">Alfa</p>
-                            <p className="text-xl font-bold text-red-600">{stats.alpha}</p>
-                        </CardContent>
-                    </Card>
-
-                    <Card className="border-indigo-200 bg-indigo-50 dark:border-indigo-900 dark:bg-indigo-950/20">
-                        <CardContent className="p-3 text-center">
-                            <p className="text-xs text-muted-foreground">Dispensasi</p>
-                            <p className="text-xl font-bold text-indigo-600">{stats.dispensasi}</p>
-                        </CardContent>
-                    </Card>
                 </div>
 
                 {activeYear && (
@@ -200,8 +183,7 @@ export default function SiswaDashboard({ siswa, stats, history, activeYear = nul
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead className="w-[110px]">Hari</TableHead>
-                                        <TableHead className="w-[120px]">Tanggal</TableHead>
+                                        <TableHead className="w-[240px]">Tanggal</TableHead>
                                         <TableHead className="w-[120px]">Status</TableHead>
                                         {hasKeterangan && <TableHead>Keterangan</TableHead>}
                                         {hasSurat && <TableHead className="w-[80px]">Surat</TableHead>}
@@ -211,7 +193,7 @@ export default function SiswaDashboard({ siswa, stats, history, activeYear = nul
                                     {history.length === 0 ? (
                                         <TableRow>
                                             <TableCell
-                                                colSpan={3 + (hasKeterangan ? 1 : 0) + (hasSurat ? 1 : 0)}
+                                                colSpan={2 + (hasKeterangan ? 1 : 0) + (hasSurat ? 1 : 0)}
                                                 className="h-24 text-center"
                                             >
                                                 Belum ada data riwayat presensi.
@@ -223,10 +205,9 @@ export default function SiswaDashboard({ siswa, stats, history, activeYear = nul
                                                 <TableCell className="font-medium whitespace-nowrap">
                                                     <div className="flex items-center gap-2">
                                                         <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
-                                                        {formatHari(record.tanggal)}
+                                                        {formatTanggalLengkap(record.tanggal)}
                                                     </div>
                                                 </TableCell>
-                                                <TableCell className="font-mono text-xs whitespace-nowrap">{formatTanggal(record.tanggal)}</TableCell>
                                                 <TableCell>
                                                     {getStatusBadge(record.status)}
                                                 </TableCell>
@@ -266,7 +247,7 @@ export default function SiswaDashboard({ siswa, stats, history, activeYear = nul
                             </button>
                             <div className="text-center">
                                 <h3 className="text-base font-semibold">Surat {previewBukti.status ? previewBukti.status.charAt(0).toUpperCase()+previewBukti.status.slice(1) : 'Presensi'}</h3>
-                                <p className="text-xs text-muted-foreground mt-0.5 font-mono break-all">{getSuratLabel(previewBukti.status ?? 'surat', previewBukti.tanggal)}.</p>
+                                <p className="text-xs text-muted-foreground mt-0.5 font-mono break-all">{getSuratLabel(previewBukti.status ?? 'surat', previewBukti.tanggal ? formatTanggalLengkap(previewBukti.tanggal) : '-')}.</p>
                             </div>
                             <div className="flex justify-center">
                                 <img src={previewBukti.url} alt={`Surat ${previewBukti.status}`} className="max-w-full max-h-[50vh] rounded-lg object-contain" loading="eager" decoding="async" onError={(e)=>{(e.currentTarget as HTMLImageElement).style.display='none'}} />

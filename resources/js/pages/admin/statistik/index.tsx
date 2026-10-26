@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import DateInput from '@/components/date-input';
 import {
     Table,
     TableBody,
@@ -301,13 +302,12 @@ export default function StatistikIndex({
 
                     <div className="flex items-center gap-2 rounded-lg border bg-card px-3 py-2 shadow-sm">
                         <Calendar className="h-4 w-4 text-muted-foreground" />
-                        <Input
-                            type="date"
+                        <DateInput
                             value={filterTanggal}
-                            onChange={(e) =>
-                                handleTanggalChange(e.target.value)
+                            onChange={(iso) =>
+                                handleTanggalChange(iso)
                             }
-                            className="h-7 w-[160px] border-0 p-0 text-sm focus-visible:ring-0"
+                            className="h-7 w-[160px] border-0 shadow-none focus-within:ring-0"
                             min={activeYear?.start}
                             max={activeYear?.end}
                         />

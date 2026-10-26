@@ -1,6 +1,7 @@
 import { Head, router } from '@inertiajs/react';
 import { CheckCircle, Clock, FileWarning, Trash2, UserCircle, BookOpen, Calendar, Loader2 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import DateInput from '@/components/date-input';
 import React, { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -73,7 +74,7 @@ export default function GuruAbsensiIndex({
         }
     }, [siswas, hasDirty]);
 
-    const showKeterangan = localSiswas.some(s => s.absensi?.status === 'sakit' || s.absensi?.status === 'izin');
+    const showKeterangan = localSiswas.some(s => s.absensi?.status === 'izin');
 
     const handleFilterChange = (key: keyof Props['filters'], value: string) => {
         const newFilters = { ...filters, [key]: value };
@@ -137,7 +138,7 @@ export default function GuruAbsensiIndex({
             return next;
         });
 
-        router.delete(absensi.destroy.url({ absensi: siswa.absensi.id }), {
+        router.delete(absensi.destroy.url({ absensi: siswa.absensi.id as number }), {
             preserveScroll: true,
             async: true,
             onSuccess: () => {
@@ -205,7 +206,7 @@ export default function GuruAbsensiIndex({
                                 ...s,
                                 absensi: {
                                     id: s.absensi?.id ?? null,
-                                    status: updated.status,
+                                    status: updated.status as 'hadir' | 'sakit' | 'izin',
                                     keterangan: updated.keterangan || null,
                                 },
                             };
@@ -265,16 +266,14 @@ export default function GuruAbsensiIndex({
 
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">Tanggal</label>
-                                    <Input
-                                        type="date"
+                                    <DateInput
                                         value={filters.tanggal}
-                                        className="bg-muted/30"
                                         min={activeYear?.start}
                                         max={activeYear?.end}
-                                        onChange={(e) =>
+                                        onChange={(iso) =>
                                             handleFilterChange(
                                                 'tanggal',
-                                                e.target.value,
+                                                iso,
                                             )
                                         }
                                     />
@@ -373,7 +372,7 @@ export default function GuruAbsensiIndex({
                                                         </td>
                                                         {showKeterangan && (
                                                             <td className="px-6 py-4">
-                                                                {siswa.absensi?.status === 'sakit' || siswa.absensi?.status === 'izin' ? (
+                                                                {siswa.absensi?.status === 'izin' ? (
                                                                     <Input
                                                                         id={`keterangan-${siswa.id}`}
                                                                         placeholder="catatan..."
@@ -414,7 +413,7 @@ export default function GuruAbsensiIndex({
                                         disabled={isSubmitting || localSiswas.length === 0}
                                         className="gap-2 rounded-xl bg-card px-6 h-9 text-sm font-medium text-foreground border border-sidebar-border/70 shadow-sm hover:bg-accent hover:text-accent-foreground"
                                     >
-                                        {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+                                        {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
                                         {isSubmitting ? 'Menyimpan...' : 'Kirim'}
                                     </Button>
                                 </div>

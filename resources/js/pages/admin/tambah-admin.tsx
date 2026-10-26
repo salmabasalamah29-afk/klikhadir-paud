@@ -1,5 +1,5 @@
 import { Head, useForm, router, usePage } from '@inertiajs/react';
-import { Edit2, Trash2, Plus, Save, Shield, KeyRound, Search, Mail, User, Lock } from 'lucide-react';
+import { Edit2, Trash2, Plus, Shield, KeyRound, Search, Mail, User, Lock } from 'lucide-react';
 import { useState, useRef } from 'react';
 import { toast } from 'sonner';
 import Pagination from '@/components/pagination';
@@ -16,7 +16,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import CsvImport from '@/components/csv-import';
 import { useAutoRefresh } from '@/hooks/use-auto-refresh';
 import admin, { dashboard as adminDashboard } from '@/routes/admin';
@@ -189,11 +189,6 @@ export default function TambahAdmin({ admins, totalAdmins }: Props) {
                     </div>
 
                     <div className="overflow-hidden rounded-xl border border-sidebar-border/70 bg-card shadow-sm dark:border-sidebar-border">
-                        <div className="p-3 border-b bg-muted/20">
-                            <h3 className="text-sm font-semibold flex items-center gap-2">
-                                <Shield className="h-4 w-4 text-primary" /> Data Admin
-                            </h3>
-                        </div>
                         <div className="overflow-x-auto">
                             <table className="w-full text-left text-xs">
                                 <thead className="bg-muted/50 text-[11px] font-medium tracking-wider text-muted-foreground uppercase">
@@ -295,14 +290,11 @@ export default function TambahAdmin({ admins, totalAdmins }: Props) {
                 <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>{editingAdmin ? 'Edit Admin' : 'Tambah Admin'}</DialogTitle>
-                        <DialogDescription>
-                            {editingAdmin ? 'Perbarui data admin yang dipilih.' : 'Tambahkan admin baru ke sistem.'}
-                        </DialogDescription>
                     </DialogHeader>
                     <form onSubmit={submit} className="space-y-4">
                         <div className="space-y-2">
                             <Label htmlFor="name" className="flex items-center gap-1.5">
-                                <User className="h-3.5 w-3.5 text-muted-foreground" /> Nama Lengkap <span className="text-destructive">*</span>
+                                <User className="h-3.5 w-3.5 text-muted-foreground" /> Nama Lengkap
                             </Label>
                             <Input
                                 id="name"
@@ -317,7 +309,7 @@ export default function TambahAdmin({ admins, totalAdmins }: Props) {
 
                         <div className="space-y-2">
                             <Label htmlFor="email" className="flex items-center gap-1.5">
-                                <Mail className="h-3.5 w-3.5 text-muted-foreground" /> Email <span className="text-destructive">*</span>
+                                <Mail className="h-3.5 w-3.5 text-muted-foreground" /> Email
                             </Label>
                             <Input
                                 id="email"
@@ -365,7 +357,7 @@ export default function TambahAdmin({ admins, totalAdmins }: Props) {
                                 Batal
                             </Button>
                             <Button type="submit" disabled={processing} className="flex-1">
-                                {processing ? 'Proses...' : editingAdmin ? <><Save className="mr-2 h-4 w-4" /> Perbarui</> : <><Plus className="mr-2 h-4 w-4" /> Simpan</>}
+                                {processing ? 'Proses...' : editingAdmin ? 'Perbarui' : 'Simpan'}
                             </Button>
                         </div>
                     </form>

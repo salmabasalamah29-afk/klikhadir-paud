@@ -65,7 +65,7 @@ export default function Login({ status }: Props) {
                             <div className="grid gap-4">
                                 <div className="grid gap-1.5">
                                     <Label htmlFor="login" className="text-sm font-medium text-[#093ff9]">
-                                        Username / NIS / Email
+                                        Username
                                     </Label>
                                     <Input
                                         id="login"
@@ -75,7 +75,7 @@ export default function Login({ status }: Props) {
                                         autoFocus
                                         tabIndex={1}
                                         autoComplete="username"
-                                        placeholder="Masukkan Username / NIS / Email"
+                                        placeholder="Masukkan Username"
                                         className="h-11 border-gray-300 bg-white text-gray-900 placeholder:text-gray-400 focus:border-[#093ff9] focus:ring-[#093ff9]/20"
                                     />
                                     <InputError message={errors.login} />

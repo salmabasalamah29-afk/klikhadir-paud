@@ -1,9 +1,10 @@
 import { Head, useForm, router, Link } from '@inertiajs/react';
-import { Edit2, Trash2, Plus, Save, UserCircle, KeyRound, Search, Eye } from 'lucide-react';
+import { Edit2, Trash2, Plus, UserCircle, KeyRound, Search, Eye } from 'lucide-react';
 import { useState, useRef } from 'react';
 import { toast } from 'sonner';
 import Pagination from '@/components/pagination';
 import { PhotoUpload } from '@/components/photo-upload';
+import DateInput from '@/components/date-input';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -19,7 +20,6 @@ import { Button } from '@/components/ui/button';
 import {
     Dialog,
     DialogContent,
-    DialogDescription,
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
@@ -77,36 +77,16 @@ interface PaginatedData<T> {
     }[];
 }
 
-function formatTanggalDisplay(value?: string | null): string {
-    if (!value) {
-        return '';
-    }
-
-    const match = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
-
-    return match ? `${match[3]}/${match[2]}/${match[1]}` : value;
-}
-
-function formatTanggalInput(value: string): string {
-    const digits = value.replace(/\D/g, '').slice(0, 8);
-
-    if (digits.length <= 2) {
-        return digits;
-    }
-
-    if (digits.length <= 4) {
-        return `${digits.slice(0, 2)}/${digits.slice(2)}`;
-    }
-
-    return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
-}
-
 function tanggalToIso(value: string): string {
-    if (value.trim() === '') {
+    const trimmed = value.trim();
+
+    if (trimmed === '') {
         return '';
     }
 
-    const match = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    const slash = trimmed.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    const dash = trimmed.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+    const match = slash ?? dash;
 
     return match ? `${match[3]}-${match[2]}-${match[1]}` : value;
 }
@@ -125,6 +105,7 @@ export default function SiswaIndex({
     const [resettingPasswordSiswaId, setResettingPasswordSiswaId] = useState<number | null>(null);
     const [showForm, setShowForm] = useState(false);
     const [activeTab, setActiveTab] = useState('pribadi');
+    const [fotoFile, setFotoFile] = useState<File | null>(null);
 
     useAutoRefresh(true, 5000);
 
@@ -161,18 +142,25 @@ export default function SiswaIndex({
         kode_pos: '',
         kelas_id: '',
         password: '',
-        foto: null as string | File | null,
+        foto: null as string | null,
         remove_foto: false,
     });
 
     const handleFotoChange = (file: File | null) => {
-        setData('foto', file);
-        setData('remove_foto', file === null);
+        setFotoFile(file);
+
+        if (file === null) {
+            setData('remove_foto', true);
+            setData('foto', null);
+        } else {
+            setData('remove_foto', false);
+        }
     };
 
     const handleOpenCreate = () => {
         reset();
         clearErrors();
+        setFotoFile(null);
         setEditingSiswa(null);
         setActiveTab('pribadi');
         setShowForm(true);
@@ -197,6 +185,7 @@ export default function SiswaIndex({
             ...formData,
             tanggal_lahir: tanggalToIso(formData.tanggal_lahir),
             tanggal_masuk: tanggalToIso(formData.tanggal_masuk),
+            foto: fotoFile ?? formData.foto,
         }));
 
         if (editingSiswa) {
@@ -227,6 +216,7 @@ export default function SiswaIndex({
     const handleEdit = (siswa: Siswa) => {
         setEditingSiswa(siswa);
         clearErrors();
+        setFotoFile(null);
         setData({
             nisn: siswa.nisn ?? '',
             nik: siswa.nik ?? '',
@@ -234,9 +224,9 @@ export default function SiswaIndex({
             nama_panggilan: siswa.nama_panggilan ?? '',
             jenis_kelamin: siswa.jenis_kelamin ?? '',
             tempat_lahir: siswa.tempat_lahir ?? '',
-            tanggal_lahir: formatTanggalDisplay(siswa.tanggal_lahir),
+            tanggal_lahir: siswa.tanggal_lahir ?? '',
             agama: siswa.agama ?? '',
-            tanggal_masuk: formatTanggalDisplay(siswa.tanggal_masuk),
+            tanggal_masuk: siswa.tanggal_masuk ?? '',
             nama_ayah: siswa.nama_ayah ?? '',
             pekerjaan_ayah: siswa.pekerjaan_ayah ?? '',
             nama_ibu: siswa.nama_ibu ?? '',
@@ -260,6 +250,7 @@ export default function SiswaIndex({
 
     const handleCancel = () => {
         setEditingSiswa(null);
+        setFotoFile(null);
         reset();
         clearErrors();
         setShowForm(false);
@@ -336,6 +327,9 @@ export default function SiswaIndex({
                                         <th scope="col" className="px-3 py-2.5 w-[110px] text-center whitespace-nowrap">
                                             NISN
                                         </th>
+                                        <th scope="col" className="px-3 py-2.5 w-[130px] text-center whitespace-nowrap">
+                                            NIK
+                                        </th>
                                         <th scope="col" className="px-3 py-2.5">
                                             Nama Lengkap
                                         </th>
@@ -361,6 +355,9 @@ export default function SiswaIndex({
                                         >
                                             <td className="px-3 py-2.5 font-mono text-[11px] font-medium whitespace-nowrap tracking-tight text-center w-[110px]">
                                                 {siswa.nisn || '-'}
+                                            </td>
+                                            <td className="px-3 py-2.5 font-mono text-[11px] whitespace-nowrap tracking-tight text-center w-[130px]">
+                                                {String(siswa.nik ?? '-')}
                                             </td>
                                             <td className="px-3 py-2.5 font-medium text-foreground text-xs">
                                                 <div className="flex items-center gap-3">
@@ -428,10 +425,10 @@ export default function SiswaIndex({
                                     ))}
                                     {siswas.data.length === 0 && (
                                         <tr>
-                                            <td
-                                                colSpan={5}
-                                                className="px-3 py-10 text-center text-muted-foreground"
-                                            >
+                                                <td
+                                                    colSpan={6}
+                                                    className="px-3 py-10 text-center text-muted-foreground"
+                                                >
                                                 <div className="flex flex-col items-center gap-2">
                                                     <UserCircle className="h-8 w-8 opacity-20" />
                                                     <p className="text-xs">Belum ada data siswa.</p>
@@ -451,7 +448,6 @@ export default function SiswaIndex({
                 <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>{editingSiswa ? 'Edit Siswa' : 'Tambah Siswa'}</DialogTitle>
-                        <DialogDescription>Kelola data siswa lengkap sesuai PAUD</DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4">
                         <div className="flex gap-2">
@@ -477,7 +473,7 @@ export default function SiswaIndex({
                                     <div className="space-y-2">
                                         <Label>Foto Profil</Label>
                                         <PhotoUpload
-                                            value={data.foto}
+                                            value={fotoFile ?? data.foto}
                                             onChange={handleFotoChange}
                                             fallback={data.nama || 'Siswa'}
                                         />
@@ -490,7 +486,7 @@ export default function SiswaIndex({
 
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div className="space-y-2">
-                                            <Label htmlFor="nisn">NISN <span className="text-destructive">*</span></Label>
+                                            <Label htmlFor="nisn">NISN</Label>
                                             <Input
                                                 id="nisn"
                                                 value={data.nisn}
@@ -509,10 +505,13 @@ export default function SiswaIndex({
                                             <Label htmlFor="nik">NIK</Label>
                                             <Input
                                                 id="nik"
+                                                type="text"
+                                                inputMode="numeric"
+                                                maxLength={20}
                                                 value={data.nik}
-                                                onChange={(e) => setData('nik', e.target.value)}
+                                                onChange={(e) => setData('nik', e.target.value.replace(/\D/g, ''))}
                                                 placeholder="Nomor Induk Kependudukan"
-                                                className="bg-muted/30"
+                                                className="bg-muted/30 font-mono"
                                             />
                                             {errors.nik && (
                                                 <p className="text-xs text-destructive">
@@ -598,17 +597,10 @@ export default function SiswaIndex({
 
                                         <div className="space-y-2">
                                             <Label htmlFor="tanggal_lahir">Tanggal Lahir</Label>
-                                            <Input
-                                                type="text"
-                                                inputMode="numeric"
+                                            <DateInput
                                                 id="tanggal_lahir"
                                                 value={data.tanggal_lahir}
-                                                onChange={(e) =>
-                                                    setData('tanggal_lahir', formatTanggalInput(e.target.value))
-                                                }
-                                                placeholder="dd/mm/yyyy"
-                                                maxLength={10}
-                                                className="bg-muted/30"
+                                                onChange={(iso) => setData('tanggal_lahir', iso)}
                                             />
                                             {errors.tanggal_lahir && (
                                                 <p className="text-xs text-destructive">
@@ -642,17 +634,10 @@ export default function SiswaIndex({
 
                                         <div className="space-y-2">
                                             <Label htmlFor="tanggal_masuk">Tanggal Masuk</Label>
-                                            <Input
-                                                type="text"
-                                                inputMode="numeric"
+                                            <DateInput
                                                 id="tanggal_masuk"
                                                 value={data.tanggal_masuk}
-                                                onChange={(e) =>
-                                                    setData('tanggal_masuk', formatTanggalInput(e.target.value))
-                                                }
-                                                placeholder="dd/mm/yyyy"
-                                                maxLength={10}
-                                                className="bg-muted/30"
+                                                onChange={(iso) => setData('tanggal_masuk', iso)}
                                             />
                                             {errors.tanggal_masuk && (
                                                 <p className="text-xs text-destructive">
@@ -947,17 +932,7 @@ export default function SiswaIndex({
                                     disabled={processing}
                                     className="flex-1"
                                 >
-                                    {processing ? (
-                                        'Proses...'
-                                    ) : editingSiswa ? (
-                                        <>
-                                            <Save className="mr-2 h-4 w-4" /> Perbarui
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Plus className="mr-2 h-4 w-4" /> Simpan
-                                        </>
-                                    )}
+                                    {processing ? 'Proses...' : editingSiswa ? 'Perbarui' : 'Simpan'}
                                 </Button>
                             </div>
                         </form>

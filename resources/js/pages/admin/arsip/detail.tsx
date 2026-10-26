@@ -5,12 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
+import DateInput, { formatTanggalIndo } from '@/components/date-input';
 import { useAutoRefresh } from '@/hooks/use-auto-refresh';
 import { dashboard as adminDashboard } from '@/routes/admin';
 import adminTahunAjaran from '@/routes/admin/tahun-ajaran';
 
-interface Record {
+interface ArsipRecord {
   id: number;
   nis: string;
   nama: string;
@@ -27,7 +27,7 @@ interface Record {
   bukti: string | null;
 }
 
-export default function ArsipDetail({ tahunAjaran, kelas, records, stats }: { tahunAjaran: any; kelas: any; records: Record[]; stats: any }) {
+export default function ArsipDetail({ tahunAjaran, kelas, records, stats }: { tahunAjaran: any; kelas: any; records: ArsipRecord[]; stats: any }) {
   useAutoRefresh(true, 5000);
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [previewBukti, setPreviewBukti] = useState<{ url: string; id: number; nama?: string; status?: string; tanggal?: string; kelasNama?: string } | null>(null);
@@ -52,7 +52,7 @@ export default function ArsipDetail({ tahunAjaran, kelas, records, stats }: { ta
     const jenis = status ? status.charAt(0).toUpperCase() + status.slice(1) : 'Surat';
     const nm = nama ? nama.toUpperCase().replace(/\s+/g, ' ').trim() : 'SISWA';
     const kls = kelasNama ?? kelas?.full_nama_kelas ?? '-';
-    const tgl = tanggal ?? selectedDate;
+    const tgl = formatTanggalIndo(tanggal ?? selectedDate);
     return `${jenis}-${nm}-${kls}-${tgl}`;
   };
 
@@ -104,7 +104,7 @@ export default function ArsipDetail({ tahunAjaran, kelas, records, stats }: { ta
               <div className="space-y-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium flex items-center gap-1"><Calendar className="h-3 w-3" /> Tanggal</label>
-                  <Input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="w-full h-9 bg-muted/30" />
+                  <DateInput value={selectedDate} onChange={(iso) => setSelectedDate(iso)} className="w-full bg-muted/30" />
                 </div>
                 <Button asChild className="w-full gap-2 h-9"><a href={`/admin/tahun-ajaran/${tahunAjaran.id}/arsip/kelas/${kelas.id}/export`}><FileSpreadsheet className="h-4 w-4" /> Ekspor Arsip</a></Button>
                 <p className="text-xs text-muted-foreground">Data ekspor lengkap dalam rentang per tahun ajaran</p>
@@ -123,7 +123,7 @@ export default function ArsipDetail({ tahunAjaran, kelas, records, stats }: { ta
 
             {selectedDate && (
               <div className="flex flex-wrap gap-2 text-xs text-muted-foreground items-center">
-                <span className="inline-flex items-center gap-1 rounded-full border px-3 py-1 bg-muted/30"><Calendar className="h-3 w-3" /> {selectedDate} ({hari(selectedDate)})</span>
+                <span className="inline-flex items-center gap-1 rounded-full border px-3 py-1 bg-muted/30"><Calendar className="h-3 w-3" /> {formatTanggalIndo(selectedDate)} ({hari(selectedDate)})</span>
                 <span className="inline-flex items-center gap-1 rounded-full border px-3 py-1 bg-muted/30"><GraduationCap className="h-3 w-3" /> {kelas.full_nama_kelas}</span>
                 <span className="inline-flex items-center gap-1 rounded-full border px-3 py-1 bg-muted/30">total: {totalFiltered} siswa</span>
               </div>
@@ -138,7 +138,7 @@ export default function ArsipDetail({ tahunAjaran, kelas, records, stats }: { ta
 
             {selectedDate ? (
               <div className="rounded-xl border border-sidebar-border/70 bg-card shadow-sm dark:border-sidebar-border overflow-hidden flex flex-col">
-                <div className="px-4 py-3 border-b bg-muted/20 flex items-center gap-2 text-sm font-semibold"><GraduationCap className="h-4 w-4" /> {kelas.full_nama_kelas} — {hari(selectedDate)}, {selectedDate.split('-').reverse().join('-')}</div>
+                <div className="px-4 py-3 border-b bg-muted/20 flex items-center gap-2 text-sm font-semibold"><GraduationCap className="h-4 w-4" /> {kelas.full_nama_kelas} — {hari(selectedDate)}, {formatTanggalIndo(selectedDate)}</div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm">
                     <thead className="bg-muted/50 text-xs font-medium text-muted-foreground uppercase tracking-wider">

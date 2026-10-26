@@ -1,5 +1,5 @@
 import { Camera, X } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -11,21 +11,38 @@ type PhotoUploadProps = {
     className?: string;
 };
 
-export function PhotoUpload({ value, onChange, fallback, className }: PhotoUploadProps) {
-    const inputRef = useRef<HTMLInputElement>(null);
-    const [preview, setPreview] = useState<string | null>(null);
+// Cache object URL per File agar preview stabil: meski referensi File berubah
+// (mis. page re-render) URL tidak di-revoke saat render berjalan, sehingga
+// gambar tidak kedap-kedip antara tampil dan hilang.
+const objectUrlCache = new WeakMap<File, string>();
 
-    useEffect(() => {
-        if (value instanceof File) {
-            const objectUrl = URL.createObjectURL(value);
-            // eslint-disable-next-line react-hooks/set-state-in-effect
-            setPreview(objectUrl);
+function resolvePreview(value: File | string | null): string | null {
+    if (value instanceof File) {
+        let url = objectUrlCache.get(value);
 
-            return () => URL.revokeObjectURL(objectUrl);
+        if (!url) {
+            url = URL.createObjectURL(value);
+            objectUrlCache.set(value, url);
         }
 
-         
-        setPreview(typeof value === 'string' && value.length > 0 ? value : null);
+        return url;
+    }
+
+    return typeof value === 'string' && value.length > 0 ? value : null;
+}
+
+function PhotoUploadBase({ value, onChange, fallback, className }: PhotoUploadProps) {
+    const inputRef = useRef<HTMLInputElement>(null);
+    const [preview, setPreview] = useState(() => resolvePreview(value));
+
+    useEffect(() => {
+        const next = resolvePreview(value);
+
+        if (next !== preview) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            setPreview(next);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [value]);
 
     const handleRemove = () => {
@@ -67,11 +84,6 @@ export function PhotoUpload({ value, onChange, fallback, className }: PhotoUploa
                         const file = e.target.files?.[0];
 
                         if (file) {
-                            if (!['image/png', 'image/jpeg', 'image/jpg'].includes(file.type)) {
-                                // Tetap izinkan tapi beri feedback jika bukan PNG/JPG
-                                onChange(file);
-                                return;
-                            }
                             onChange(file);
                         }
                     }}
@@ -80,3 +92,5 @@ export function PhotoUpload({ value, onChange, fallback, className }: PhotoUploa
         </div>
     );
 }
+
+export const PhotoUpload = memo(PhotoUploadBase);

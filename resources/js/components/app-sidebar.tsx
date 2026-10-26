@@ -77,7 +77,7 @@ export function AppSidebar() {
                 icon: Users,
             },
             {
-                title: 'Murid',
+                title: 'Siswa',
                 href: admin.siswa.index.url(),
                 icon: UserCircle,
             },

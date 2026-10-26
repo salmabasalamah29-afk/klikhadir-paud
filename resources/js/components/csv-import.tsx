@@ -22,7 +22,7 @@ export default function CsvImport({ entity, title, description }: CsvImportProps
     const [file, setFile] = useState<File | null>(null);
     const [uploading, setUploading] = useState(false);
     const [open, setOpen] = useState(false);
-    const [result, setResult] = useState<{ success: string | null; errors: string[] } | null>(null);
+    const [result, setResult] = useState<{ success: string | null; title: string | null; errors: string[] } | null>(null);
     const inputRef = useRef<HTMLInputElement>(null);
 
     const templateUrl = `/admin/import/template/${entity}`;
@@ -56,15 +56,14 @@ export default function CsvImport({ entity, title, description }: CsvImportProps
 
                 if (errorMsg) {
                     // Jika ada per-baris error, tampilkan semua agar user tahu bagian mana yang gagal (jangan tutup modal)
-                    const detailedErrors = importErrors.length ? [errorMsg, ...importErrors] : [errorMsg];
                     toast.error(errorMsg);
-                    setResult({ success: null, errors: detailedErrors });
+                    setResult({ success: null, title: errorMsg, errors: importErrors });
                 } else if (importErrors && importErrors.length > 0) {
                     toast.warning(successMsg);
-                    setResult({ success: successMsg, errors: importErrors });
+                    setResult({ success: successMsg, title: null, errors: importErrors });
                 } else {
                     toast.success(successMsg);
-                    setResult({ success: successMsg, errors: [] });
+                    setResult({ success: successMsg, title: null, errors: [] });
                     setTimeout(() => {
                         setFile(null);
                         if (inputRef.current) inputRef.current.value = '';
@@ -77,7 +76,7 @@ export default function CsvImport({ entity, title, description }: CsvImportProps
             onError: (errors) => {
                 const msg = (errors as Record<string, string>).file || (errors as Record<string, string>).error || 'Gagal impor, periksa format CSV';
                 toast.error(msg);
-                setResult({ success: null, errors: [msg] });
+                setResult({ success: null, title: msg, errors: [] });
             },
             onFinish: () => setUploading(false),
         });
@@ -154,15 +153,16 @@ export default function CsvImport({ entity, title, description }: CsvImportProps
 
                     {result && (
                         <div className={`max-h-48 overflow-y-auto rounded-md border p-2.5 text-[11px] leading-snug ${result.errors.length ? 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-300' : 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/20 dark:text-emerald-300'}`}>
-                            {result.success && <p className="text-xs font-medium leading-snug">{result.success}</p>}
+                            {(result.success || result.title) && (
+                                <p className="text-xs font-medium leading-snug">{result.success ?? result.title}</p>
+                            )}
                             {result.errors.length > 0 && (
-                                <ul className="mt-1.5 list-disc space-y-1 pl-4">
+                                <ol className={(result.success || result.title) ? 'mt-1.5 list-decimal space-y-1 pl-4' : 'list-decimal space-y-1 pl-4'}>
                                     {result.errors.map((e, i) => (
                                         <li key={i} className="break-words">{e}</li>
                                     ))}
-                                </ul>
+                                </ol>
                             )}
-                            {result.errors.length === 0 && result.success && <p className="mt-1 text-[11px] opacity-80">Data akan refresh otomatis.</p>}
                         </div>
                     )}
 

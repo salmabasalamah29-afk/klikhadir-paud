@@ -37,7 +37,7 @@ import {
     ChartTooltip,
     ChartTooltipContent,
 } from '@/components/ui/chart';
-import { Input } from '@/components/ui/input';
+import DateInput from '@/components/date-input';
 import { useAutoRefresh } from '@/hooks/use-auto-refresh';
 import { dashboard as adminDashboard } from '@/routes/admin';
 
@@ -588,13 +588,12 @@ export default function AdminDashboard({
                                 <label className="text-xs font-medium text-muted-foreground">
                                     Tanggal Mulai
                                 </label>
-                                <Input
-                                    type="date"
+                                <DateInput
                                     value={startDate1}
-                                    onChange={(e) =>
-                                        setStartDate1(e.target.value)
+                                    onChange={(iso) =>
+                                        setStartDate1(iso)
                                     }
-                                    className="h-9 w-full bg-muted/30 md:w-[170px]"
+                                    className="w-full md:w-[170px]"
                                     min={activeYear?.start}
                                     max={activeYear?.end}
                                 />
@@ -604,13 +603,12 @@ export default function AdminDashboard({
                                 <label className="text-xs font-medium text-muted-foreground">
                                     Tanggal Selesai
                                 </label>
-                                <Input
-                                    type="date"
+                                <DateInput
                                     value={endDate1}
-                                    onChange={(e) =>
-                                        setEndDate1(e.target.value)
+                                    onChange={(iso) =>
+                                        setEndDate1(iso)
                                     }
-                                    className="h-9 w-full bg-muted/30 md:w-[170px]"
+                                    className="w-full md:w-[170px]"
                                     min={activeYear?.start}
                                     max={activeYear?.end}
                                 />
@@ -728,13 +726,12 @@ export default function AdminDashboard({
                                 <label className="text-xs font-medium text-muted-foreground">
                                     Tanggal Mulai
                                 </label>
-                                <Input
-                                    type="date"
+                                <DateInput
                                     value={startDate2}
-                                    onChange={(e) =>
-                                        setStartDate2(e.target.value)
+                                    onChange={(iso) =>
+                                        setStartDate2(iso)
                                     }
-                                    className="h-9 w-full bg-muted/30 md:w-[170px]"
+                                    className="w-full md:w-[170px]"
                                     min={activeYear?.start}
                                     max={activeYear?.end}
                                 />
@@ -744,13 +741,12 @@ export default function AdminDashboard({
                                 <label className="text-xs font-medium text-muted-foreground">
                                     Tanggal Selesai
                                 </label>
-                                <Input
-                                    type="date"
+                                <DateInput
                                     value={endDate2}
-                                    onChange={(e) =>
-                                        setEndDate2(e.target.value)
+                                    onChange={(iso) =>
+                                        setEndDate2(iso)
                                     }
-                                    className="h-9 w-full bg-muted/30 md:w-[170px]"
+                                    className="w-full md:w-[170px]"
                                     min={activeYear?.start}
                                     max={activeYear?.end}
                                 />
@@ -784,13 +780,12 @@ export default function AdminDashboard({
                                     Klik status untuk melihat detail siswa
                                 </CardDescription>
                             </div>
-                            <Input
-                                type="date"
+                            <DateInput
                                 value={statDate}
-                                onChange={(e) =>
-                                    handleStatDateChange(e.target.value)
+                                onChange={(iso) =>
+                                    handleStatDateChange(iso)
                                 }
-                                className="h-8 w-[170px] text-xs"
+                                className="h-8 w-[170px]"
                             />
                         </CardHeader>
                         <CardContent className="flex flex-1 flex-col">

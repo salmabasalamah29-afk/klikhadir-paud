@@ -1,5 +1,5 @@
 import { Head, useForm, router } from '@inertiajs/react';
-import { Calendar, Edit2, Trash2, Plus, Save, CheckCircle2, ArrowUp, Archive } from 'lucide-react';
+import { Calendar, Edit2, Trash2, Plus, CheckCircle2, ArrowUp, Archive } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import Pagination from '@/components/pagination';
@@ -346,17 +346,7 @@ export default function TahunAjaranIndex({
                                 Batal
                             </Button>
                             <Button type="submit" disabled={processing}>
-                                {processing ? (
-                                    'Proses...'
-                                ) : editingTahun ? (
-                                    <>
-                                        <Save className="mr-2 h-4 w-4" /> Perbarui
-                                    </>
-                                ) : (
-                                    <>
-                                        <Plus className="mr-2 h-4 w-4" /> Simpan
-                                    </>
-                                )}
+                                {processing ? 'Proses...' : editingTahun ? 'Perbarui' : 'Simpan'}
                             </Button>
                         </DialogFooter>
                     </form>

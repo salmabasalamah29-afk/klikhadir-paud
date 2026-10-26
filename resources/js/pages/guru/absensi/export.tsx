@@ -1,10 +1,9 @@
-import { Head, router } from '@inertiajs/react';
-import { FileSpreadsheet, ChevronDown, Loader2 } from 'lucide-react';
-import { useState } from 'react';
+﻿import { Head } from '@inertiajs/react';
+import { ChevronDown, FileSpreadsheet, Search } from 'lucide-react';
+import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import SearchableSelect from '@/components/ui/searchable-select';
+import DateInput from '@/components/date-input';
 
 interface Kelas {
     id: number;
@@ -32,23 +31,23 @@ export default function GuruExportAbsensi({
     gurus = [],
     activeYear,
 }: Props) {
-    // Form 1: Ekspor Presensi Kelas (Siswa)
+    // Form 1: Ekspor Presensi Siswa
     const [kelasIds1, setKelasIds1] = useState<string[]>([]);
     const [startDate1, setStartDate1] = useState('');
     const [endDate1, setEndDate1] = useState('');
     const [kelasSearch1, setKelasSearch1] = useState('');
     const [kelasOpen1, setKelasOpen1] = useState(false);
     const [exporting1, setExporting1] = useState(false);
-    const kelasRef1 = useState<HTMLDivElement>(null);
+    const kelasRef1 = useRef<HTMLDivElement>(null);
 
-    // Form 2: Ekspor Rekap Presensi Guru
+    // Form 2: Ekspor Presensi Guru
     const [guruIds2, setGuruIds2] = useState<string[]>([]);
     const [startDate2, setStartDate2] = useState('');
     const [endDate2, setEndDate2] = useState('');
     const [guruSearch2, setGuruSearch2] = useState('');
     const [guruOpen2, setGuruOpen2] = useState(false);
     const [exporting2, setExporting2] = useState(false);
-    const guruRef2 = useState<HTMLDivElement>(null);
+    const guruRef2 = useRef<HTMLDivElement>(null);
 
     const allKelasSelected1 = kelasIds1.length === kelasList.length && kelasList.length > 0;
     const allGuruSelected2 = guruIds2.length === gurus.filter(g => g.guru).length && gurus.filter(g => g.guru).length > 0;
@@ -65,7 +64,6 @@ export default function GuruExportAbsensi({
         setKelasIds1(prev =>
             prev.includes(id) ? prev.filter(v => v !== id) : [...prev, id]
         );
-        setKelasOpen1(false);
     };
 
     const toggleAllKelas1 = () => {
@@ -74,14 +72,12 @@ export default function GuruExportAbsensi({
         } else {
             setKelasIds1(kelasList.map(k => k.id.toString()));
         }
-        setKelasOpen1(false);
     };
 
     const toggleGuru2 = (id: string) => {
         setGuruIds2(prev =>
             prev.includes(id) ? prev.filter(v => v !== id) : [...prev, id]
         );
-        setGuruOpen2(false);
     };
 
     const toggleAllGuru2 = () => {
@@ -90,7 +86,6 @@ export default function GuruExportAbsensi({
         } else {
             setGuruIds2(gurus.filter(g => g.guru).map(g => g.id.toString()));
         }
-        setGuruOpen2(false);
     };
 
     const handleExport1 = async () => {
@@ -117,7 +112,6 @@ export default function GuruExportAbsensi({
             });
 
             if (!response.ok) {
-                const text = await response.text();
                 toast.error('Gagal mengunduh file ekspor.');
                 return;
             }
@@ -130,7 +124,7 @@ export default function GuruExportAbsensi({
 
             const disposition = response.headers.get('Content-Disposition') || '';
             const filenameMatch = disposition.match(/filename="?([^";\n]+)"?/);
-            const filename = filenameMatch ? filenameMatch[1] : 'rekap-presensi-kelas.xlsx';
+            const filename = filenameMatch ? filenameMatch[1] : 'rekap-presensi-kelas.xls';
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -171,7 +165,6 @@ export default function GuruExportAbsensi({
             });
 
             if (!response.ok) {
-                const text = await response.text();
                 toast.error('Gagal mengunduh file ekspor.');
                 return;
             }
@@ -184,7 +177,7 @@ export default function GuruExportAbsensi({
 
             const disposition = response.headers.get('Content-Disposition') || '';
             const filenameMatch = disposition.match(/filename="?([^";\n]+)"?/);
-            const filename = filenameMatch ? filenameMatch[1] : 'rekap-presensi-guru.xlsx';
+            const filename = filenameMatch ? filenameMatch[1] : 'rekap-presensi-guru.xls';
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -210,29 +203,26 @@ export default function GuruExportAbsensi({
                         <h1 className="text-2xl font-bold tracking-tight">
                             Ekspor Presensi
                         </h1>
-                        <p className="text-sm text-foreground mt-1">
-                            Ekspor data presensi dalam format Excel.
+                        <p className="text-muted-foreground mt-1">
+                            Ekspor data presensi kelas dan guru
                         </p>
                     </div>
                 </div>
 
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                    {/* Form 1: Ekspor Presensi Kelas (Siswa) */}
+                    {/* Form 1: Ekspor Presensi Siswa */}
                     <div className="col-span-1 flex flex-col gap-6">
                         <div className="rounded-xl border border-sidebar-border/70 bg-card p-6 shadow-sm dark:border-sidebar-border min-h-[400px] flex flex-col">
                             <div className="mb-4">
                                 <h2 className="text-lg font-semibold flex items-center gap-2">
-                                    <FileSpreadsheet className="h-4 w-4 text-emerald-600" /> Ekspor Presensi Kelas (Siswa)
+                                    <FileSpreadsheet className="h-4 w-4 text-emerald-600" /> Ekspor Presensi Siswa
                                 </h2>
-                                <p className="text-sm text-muted-foreground mt-1">
-                                    Filter: Kelas, Tanggal Mulai, Tanggal Selesai
-                                </p>
                             </div>
 
                             <div className="space-y-4">
                                 <div className="space-y-2">
                                     <label className="text-xs font-medium text-muted-foreground">Pilih Kelas</label>
-                                    <div ref={kelasRef1[0]} className="relative">
+                                    <div ref={kelasRef1} className="relative">
                                         <button
                                             type="button"
                                             onClick={() => {
@@ -291,58 +281,54 @@ export default function GuruExportAbsensi({
                                             </div>
                                         )}
                                     </div>
-
-                                    <div className="space-y-2">
-                                        <label className="text-xs font-medium text-muted-foreground">Tanggal Mulai</label>
-                                        <Input
-                                            type="date"
-                                            value={startDate1}
-                                            onChange={(e) => setStartDate1(e.target.value)}
-                                            className="w-[170px] bg-muted/30 h-9"
-                                            min={activeYear?.start}
-                                            max={activeYear?.end}
-                                        />
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <label className="text-xs font-medium text-muted-foreground">Tanggal Selesai</label>
-                                        <Input
-                                            type="date"
-                                            value={endDate1}
-                                            onChange={(e) => setEndDate1(e.target.value)}
-                                            className="w-[170px] bg-muted/30 h-9"
-                                            min={activeYear?.start}
-                                            max={activeYear?.end}
-                                        />
-                                    </div>
-
-                                    <Button
-                                        onClick={handleExport1}
-                                        disabled={exporting1 || kelasIds1.length === 0}
-                                        className="w-full py-3 gap-2"
-                                    >
-                                        {exporting1 ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                                        Ekspor Presensi Siswa
-                                    </Button>
                                 </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-xs font-medium text-muted-foreground">Tanggal Mulai</label>
+                                    <DateInput
+                                        value={startDate1}
+                                        onChange={(iso) => setStartDate1(iso)}
+                                        className="w-[170px]"
+                                        min={activeYear?.start}
+                                        max={activeYear?.end}
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-xs font-medium text-muted-foreground">Tanggal Selesai</label>
+                                    <DateInput
+                                        value={endDate1}
+                                        onChange={(iso) => setEndDate1(iso)}
+                                        className="w-[170px]"
+                                        min={activeYear?.start}
+                                        max={activeYear?.end}
+                                    />
+                                </div>
+
+                                <Button
+                                    onClick={handleExport1}
+                                    disabled={exporting1 || kelasIds1.length === 0}
+                                    className="w-full py-3"
+                                >
+                                    {exporting1 ? 'Memproses...' : 'Ekspor'}
+                                </Button>
                             </div>
                         </div>
+                    </div>
 
-                        {/* Form 2: Ekspor Rekap Presensi Guru */}
+                    {/* Form 2: Ekspor Presensi Guru */}
+                    <div className="col-span-1 flex flex-col gap-6">
                         <div className="rounded-xl border border-sidebar-border/70 bg-card p-6 shadow-sm dark:border-sidebar-border min-h-[400px] flex flex-col">
                             <div className="mb-4">
                                 <h2 className="text-lg font-semibold flex items-center gap-2">
-                                    <FileSpreadsheet className="h-4 w-4 text-blue-600" /> Ekspor Rekap Presensi Guru
+                                    <FileSpreadsheet className="h-4 w-4 text-blue-600" /> Ekspor Presensi Guru
                                 </h2>
-                                <p className="text-sm text-muted-foreground mt-1">
-                                    Filter: Guru, Tanggal Mulai, Tanggal Selesai
-                                </p>
                             </div>
 
                             <div className="space-y-4">
                                 <div className="space-y-2">
                                     <label className="text-xs font-medium text-muted-foreground">Pilih Guru</label>
-                                    <div ref={guruRef2[0]} className="relative">
+                                    <div ref={guruRef2} className="relative">
                                         <button
                                             type="button"
                                             onClick={() => {
@@ -403,40 +389,37 @@ export default function GuruExportAbsensi({
                                             </div>
                                         )}
                                     </div>
-
-                                    <div className="space-y-2">
-                                        <label className="text-xs font-medium text-muted-foreground">Tanggal Mulai</label>
-                                        <Input
-                                            type="date"
-                                            value={startDate2}
-                                            onChange={(e) => setStartDate2(e.target.value)}
-                                            className="w-[170px] bg-muted/30 h-9"
-                                            min={activeYear?.start}
-                                            max={activeYear?.end}
-                                        />
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <label className="text-xs font-medium text-muted-foreground">Tanggal Selesai</label>
-                                        <Input
-                                            type="date"
-                                            value={endDate2}
-                                            onChange={(e) => setEndDate2(e.target.value)}
-                                            className="w-[170px] bg-muted/30 h-9"
-                                            min={activeYear?.start}
-                                            max={activeYear?.end}
-                                        />
-                                    </div>
-
-                                    <Button
-                                        onClick={handleExport2}
-                                        disabled={exporting2 || guruIds2.length === 0}
-                                        className="w-full py-3 gap-2"
-                                    >
-                                        {exporting2 ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                                        Ekspor Presensi Guru
-                                    </Button>
                                 </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-xs font-medium text-muted-foreground">Tanggal Mulai</label>
+                                    <DateInput
+                                        value={startDate2}
+                                        onChange={(iso) => setStartDate2(iso)}
+                                        className="w-[170px]"
+                                        min={activeYear?.start}
+                                        max={activeYear?.end}
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-xs font-medium text-muted-foreground">Tanggal Selesai</label>
+                                    <DateInput
+                                        value={endDate2}
+                                        onChange={(iso) => setEndDate2(iso)}
+                                        className="w-[170px]"
+                                        min={activeYear?.start}
+                                        max={activeYear?.end}
+                                    />
+                                </div>
+
+                                <Button
+                                    onClick={handleExport2}
+                                    disabled={exporting2 || guruIds2.length === 0}
+                                    className="w-full py-3"
+                                >
+                                    {exporting2 ? 'Memproses...' : 'Ekspor'}
+                                </Button>
                             </div>
                         </div>
                     </div>

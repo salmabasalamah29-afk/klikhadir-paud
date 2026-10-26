@@ -1,5 +1,5 @@
 import { Head, useForm, router } from '@inertiajs/react';
-import { Edit2, Trash2, Plus, Save, Layers, Search } from 'lucide-react';
+import { Edit2, Trash2, Plus, Layers, Search } from 'lucide-react';
 import { useState, useRef } from 'react';
 import { toast } from 'sonner';
 import Pagination from '@/components/pagination';
@@ -241,17 +241,7 @@ export default function KelasIndex({
                                 Batal
                             </Button>
                             <Button type="submit" disabled={processing} className="flex-1">
-                                {processing ? (
-                                    'Proses...'
-                                ) : editingKelas ? (
-                                    <>
-                                        <Save className="mr-2 h-4 w-4" /> Perbarui
-                                    </>
-                                ) : (
-                                    <>
-                                        <Plus className="mr-2 h-4 w-4" /> Simpan
-                                    </>
-                                )}
+                                {processing ? 'Proses...' : editingKelas ? 'Perbarui' : 'Simpan'}
                             </Button>
                         </div>
                     </form>

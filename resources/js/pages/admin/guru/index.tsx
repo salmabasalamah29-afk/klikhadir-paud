@@ -1,5 +1,5 @@
 import { Head, useForm, router, Link } from '@inertiajs/react';
-import { Edit2, Trash2, Plus, Save, Users, KeyRound, Search, Eye } from 'lucide-react';
+import { Edit2, Trash2, Plus, Users, KeyRound, Search, Eye } from 'lucide-react';
 import { useState, useRef } from 'react';
 import { toast } from 'sonner';
 import Pagination from '@/components/pagination';
@@ -19,7 +19,6 @@ import { Button } from '@/components/ui/button';
 import {
     Dialog,
     DialogContent,
-    DialogDescription,
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
@@ -58,6 +57,7 @@ export default function GuruIndex({
     const [deletingGuruId, setDeletingGuruId] = useState<number | null>(null);
     const [resettingPasswordGuruId, setResettingPasswordGuruId] = useState<number | null>(null);
     const [showForm, setShowForm] = useState(false);
+    const [fotoFile, setFotoFile] = useState<File | null>(null);
 
     useAutoRefresh(true, 5000);
 
@@ -72,22 +72,29 @@ export default function GuruIndex({
     });
     const searchTimeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-    const { data, setData, post, put, processing, errors, reset, clearErrors } = useForm({
+    const { data, setData, post, put, processing, errors, reset, clearErrors, transform } = useForm({
         nama: '',
         jenis_kelamin: '',
         password: '',
-        foto: null as string | File | null,
+        foto: null as string | null,
         remove_foto: false,
     });
 
     const handleFotoChange = (file: File | null) => {
-        setData('foto', file);
-        setData('remove_foto', file === null);
+        setFotoFile(file);
+
+        if (file === null) {
+            setData('remove_foto', true);
+            setData('foto', null);
+        } else {
+            setData('remove_foto', false);
+        }
     };
 
     const handleOpenCreate = () => {
         reset();
         clearErrors();
+        setFotoFile(null);
         setEditingGuru(null);
         setShowForm(true);
     };
@@ -106,6 +113,11 @@ export default function GuruIndex({
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
+
+        transform((formData) => ({
+            ...formData,
+            foto: fotoFile ?? formData.foto,
+        }));
 
         if (editingGuru) {
             put(adminGuru.update.url({ guru: editingGuru.id }), {
@@ -135,6 +147,7 @@ export default function GuruIndex({
     const handleEdit = (guru: Guru) => {
         setEditingGuru(guru);
         clearErrors();
+        setFotoFile(null);
         setData({
             nama: guru.nama,
             jenis_kelamin: guru.jenis_kelamin ?? '',
@@ -147,6 +160,7 @@ export default function GuruIndex({
 
     const handleCancel = () => {
         setEditingGuru(null);
+        setFotoFile(null);
         reset();
         clearErrors();
         setShowForm(false);
@@ -335,13 +349,12 @@ export default function GuruIndex({
                 <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>{editingGuru ? 'Edit Guru' : 'Tambah Guru'}</DialogTitle>
-                        <DialogDescription>Kelola data guru</DialogDescription>
                     </DialogHeader>
                     <form onSubmit={submit} className="space-y-4">
                         <div className="space-y-2">
                             <Label>Foto Profil</Label>
                             <PhotoUpload
-                                value={data.foto}
+                                value={fotoFile ?? data.foto}
                                 onChange={handleFotoChange}
                                 fallback={data.nama || 'Guru'}
                             />
@@ -428,17 +441,7 @@ export default function GuruIndex({
                                 disabled={processing}
                                 className="flex-1"
                             >
-                                {processing ? (
-                                    'Proses...'
-                                ) : editingGuru ? (
-                                    <>
-                                        <Save className="mr-2 h-4 w-4" /> Perbarui
-                                    </>
-                                ) : (
-                                    <>
-                                        <Plus className="mr-2 h-4 w-4" /> Simpan
-                                    </>
-                                )}
+                                {processing ? 'Proses...' : editingGuru ? 'Perbarui' : 'Simpan'}
                             </Button>
                         </div>
                     </form>
