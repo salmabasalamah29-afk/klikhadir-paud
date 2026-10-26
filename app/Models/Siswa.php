@@ -14,6 +14,8 @@ class Siswa extends Model
 {
     protected $appends = ['foto_url'];
 
+    protected $casts = ['is_alumni' => 'boolean'];
+
     /**
      * Get the user that owns the siswa.
      */

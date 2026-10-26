@@ -90,18 +90,67 @@ class AbsensiController extends Controller
             'status.in' => 'Status harus Hadir, Sakit, atau Izin.',
         ]);
 
+        $guruId = $request->user()->guru?->id;
+        if (! $guruId) {
+            return back()->with('error', 'Data guru tidak ditemukan.');
+        }
+
         Absensi::updateOrCreate(
             [
                 'siswa_id' => $validated['siswa_id'],
                 'tanggal' => $validated['tanggal'],
             ],
             [
+                'guru_id' => $guruId,
                 'status' => $validated['status'],
-                'keterangan' => $validated['keterangan'] ?? null,
+                'keterangan' => $validated['status'] === 'izin' ? ($validated['keterangan'] ?? null) : null,
             ]
         );
 
         return back()->with('success', 'Status kehadiran berhasil disimpan.');
+    }
+
+    public function bulkStore(Request $request)
+    {
+        if (! TahunAjaran::isDateInActiveYear($request->input('tanggal'))) {
+            return back()->with('error', 'Tanggal tidak valid untuk tahun ajaran aktif.');
+        }
+
+        $validated = $request->validate([
+            'kelas_id' => 'required|exists:kelas,id',
+            'tanggal' => 'required|date',
+            'absensis' => 'required|array|min:1',
+            'absensis.*.siswa_id' => 'required|exists:siswas,id',
+            'absensis.*.status' => 'required|in:hadir,sakit,izin',
+            'absensis.*.keterangan' => 'nullable|string|max:255',
+        ], [
+            'absensis.required' => 'Data presensi wajib diisi.',
+            'absensis.*.status.required' => 'Status kehadiran wajib dipilih.',
+            'absensis.*.status.in' => 'Status harus Hadir, Sakit, atau Izin.',
+        ]);
+
+        $guruId = $request->user()->guru?->id;
+        if (! $guruId) {
+            return back()->with('error', 'Data guru tidak ditemukan.');
+        }
+
+        $tanggal = $validated['tanggal'];
+
+        foreach ($validated['absensis'] as $item) {
+            Absensi::updateOrCreate(
+                [
+                    'siswa_id' => $item['siswa_id'],
+                    'tanggal' => $tanggal,
+                ],
+                [
+                    'guru_id' => $guruId,
+                    'status' => $item['status'],
+                    'keterangan' => $item['status'] === 'izin' ? ($item['keterangan'] ?? null) : null,
+                ]
+            );
+        }
+
+        return back()->with('success', 'Validasi kehadiran berhasil disimpan ('.count($validated['absensis']).' siswa).');
     }
 
     public function destroy(string $id)

@@ -42,7 +42,7 @@ class LihatPresensiController extends Controller
                         ->with('guru')
                         ->orderBy('updated_at', 'desc');
                 }])
-                ->orderBy('nis', 'asc')
+                ->orderBy('nisn', 'asc')
                 ->get();
 
             $siswas = $rawSiswas->map(function ($siswa) {
@@ -50,7 +50,7 @@ class LihatPresensiController extends Controller
 
                 return [
                     'id' => $siswa->id,
-                    'nis' => $siswa->nis,
+                    'nisn' => $siswa->nisn,
                     'nama' => $siswa->nama,
                     'foto_url' => $siswa->foto_url,
                     'absensi' => $absensi ? [
@@ -59,6 +59,7 @@ class LihatPresensiController extends Controller
                         'keterangan' => $absensi->keterangan,
                         'guru_nama' => $absensi->guru?->nama ?? '-',
                         'created_at' => $absensi->created_at,
+                        'updated_at' => $absensi->updated_at,
                     ] : null,
                 ];
             })->values()->all();

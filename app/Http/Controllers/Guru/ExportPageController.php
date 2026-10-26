@@ -84,26 +84,24 @@ class ExportPageController extends Controller
             $html .= '</head><body>';
 
             $html .= '<table class="header-meta">';
-            $html .= '<tr><td style="font-weight:bold;width:90px;white-space:nowrap">Ekspor</td><td style="white-space:nowrap">: Presensi Kelas (Siswa)</td></tr>';
+            $html .= '<tr><td style="font-weight:bold;width:90px;white-space:nowrap">Ekspor</td><td style="white-space:nowrap">: Presensi Siswa</td></tr>';
             if ($startDate || $endDate) {
-                $periode = ($startDate ?: '...').' s/d '.($endDate ?: '...');
+                $periode = ($startDate ? Carbon::parse($startDate)->format('d-m-Y') : '...').' s/d '.($endDate ? Carbon::parse($endDate)->format('d-m-Y') : '...');
                 $html .= '<tr><td style="font-weight:bold;white-space:nowrap">Periode</td><td style="white-space:nowrap">: '.$periode.'</td></tr>';
             }
             $html .= '</table>';
 
             foreach ($kelasList as $kelas) {
                 $html .= '<table border="1" cellspacing="0" cellpadding="10" style="border-collapse:collapse;width:100%;border:1px solid #000;">';
-                $html .= '<tr class="title-row"><td colspan="5">Kelas: '.e($kelas->full_nama_kelas).'</td></tr>';
-                $html .= '<thead><tr><th style="width:38px">No</th><th style="width:58px">NIS</th><th style="min-width:200px">Nama Siswa</th><th style="width:100px">Tanggal</th><th style="width:100px">Status</th></tr></thead><tbody>';
+                $html .= '<tr class="title-row"><td colspan="6">Kelas: '.e($kelas->full_nama_kelas).'</td></tr>';
+                $html .= '<thead><tr><th style="width:38px">No</th><th style="width:80px">NISN</th><th style="min-width:200px">Nama Siswa</th><th style="width:100px">Tanggal</th><th style="width:100px">Status</th><th style="min-width:180px">Keterangan</th></tr></thead><tbody>';
 
                 $no = 1;
                 $hasData = false;
 
-                foreach ($kelas->siswas as $siswa) {
-                    if ($siswa->is_alumni) {
-                        continue;
-                    }
+                $siswaList = $kelas->siswas()->where('is_alumni', false)->orderBy('nisn', 'asc')->get();
 
+                foreach ($siswaList as $siswa) {
                     $absensis = Absensi::where('siswa_id', $siswa->id)
                         ->when($startDate, fn ($q) => $q->where('tanggal', '>=', $startDate))
                         ->when($endDate, fn ($q) => $q->where('tanggal', '<=', $endDate))
@@ -114,10 +112,11 @@ class ExportPageController extends Controller
                         $hasData = true;
                         $html .= '<tr>';
                         $html .= '<td style="text-align:center;">'.$no++.'</td>';
-                        $html .= '<td style="text-align:center;">'.e($siswa->nis).'</td>';
+                        $html .= '<td style="text-align:center;">'.e($siswa->nisn).'</td>';
                         $html .= '<td>'.e($siswa->nama).'</td>';
-                        $html .= '<td style="text-align:center;">'.e($a->tanggal).'</td>';
+                        $html .= '<td style="text-align:center;">'.e(Carbon::parse($a->tanggal)->format('d-m-Y')).'</td>';
                         $html .= '<td style="text-align:center;">'.e(ucfirst($a->status)).'</td>';
+                        $html .= '<td>'.e($a->keterangan ?? '-').'</td>';
                         $html .= '</tr>';
                     }
                 }
@@ -167,9 +166,9 @@ class ExportPageController extends Controller
             $html .= '</head><body>';
 
             $html .= '<table class="header-meta">';
-            $html .= '<tr><td style="font-weight:bold;width:90px;white-space:nowrap">Ekspor</td><td style="white-space:nowrap">: Rekap Presensi Guru</td></tr>';
+            $html .= '<tr><td style="font-weight:bold;width:90px;white-space:nowrap">Ekspor</td><td style="white-space:nowrap">: Presensi Guru</td></tr>';
             if ($startDate || $endDate) {
-                $periode = ($startDate ?: '...').' s/d '.($endDate ?: '...');
+                $periode = ($startDate ? Carbon::parse($startDate)->format('d-m-Y') : '...').' s/d '.($endDate ? Carbon::parse($endDate)->format('d-m-Y') : '...');
                 $html .= '<tr><td style="font-weight:bold;white-space:nowrap">Periode</td><td style="white-space:nowrap">: '.$periode.'</td></tr>';
             }
             $html .= '</table>';
@@ -197,7 +196,7 @@ class ExportPageController extends Controller
                     $hasData = true;
                     $html .= '<tr>';
                     $html .= '<td style="text-align:center;">'.$no++.'</td>';
-                    $html .= '<td style="text-align:center;">'.e($p->tanggal).'</td>';
+                    $html .= '<td style="text-align:center;">'.e(Carbon::parse($p->tanggal)->format('d-m-Y')).'</td>';
                     $html .= '<td style="text-align:center;">'.e(ucfirst($p->status)).'</td>';
                     $html .= '<td>'.e($p->keterangan ?? '-').'</td>';
                     $html .= '</tr>';

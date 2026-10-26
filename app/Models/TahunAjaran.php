@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -10,6 +11,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class TahunAjaran extends Model
 {
     protected $table = 'tahun_ajarans';
+
+    protected $casts = ['is_active' => 'boolean'];
 
     public function arsipPresensis(): HasMany
     {
@@ -20,7 +23,7 @@ class TahunAjaran extends Model
      * Active academic year start/end (July 1 tahun_awal - June 30 tahun_akhir).
      * Live attendance (absensis) is only valid within this range; older data is in arsip.
      *
-     * @return array{0:\Carbon\Carbon,1:\Carbon\Carbon}|null
+     * @return array{0:Carbon,1:Carbon}|null
      */
     public static function activeRange(): ?array
     {
@@ -30,8 +33,8 @@ class TahunAjaran extends Model
         }
 
         try {
-            $start = \Carbon\Carbon::create((int) $active->tahun_awal, 7, 1)->startOfDay();
-            $end = \Carbon\Carbon::create((int) $active->tahun_akhir, 6, 30)->endOfDay();
+            $start = Carbon::create((int) $active->tahun_awal, 7, 1)->startOfDay();
+            $end = Carbon::create((int) $active->tahun_akhir, 6, 30)->endOfDay();
 
             return [$start, $end];
         } catch (\Throwable $e) {
@@ -49,7 +52,7 @@ class TahunAjaran extends Model
             return true;
         }
         try {
-            $d = \Carbon\Carbon::parse($date)->startOfDay();
+            $d = Carbon::parse($date)->startOfDay();
 
             return $d->between($range[0], $range[1]);
         } catch (\Throwable $e) {
