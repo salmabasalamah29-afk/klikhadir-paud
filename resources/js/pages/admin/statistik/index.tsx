@@ -7,12 +7,12 @@ import {
     Search,
 } from 'lucide-react';
 import { useState, useMemo } from 'react';
+import DateInput, { formatTanggalLengkap } from '@/components/date-input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import DateInput from '@/components/date-input';
 import {
     Table,
     TableBody,
@@ -44,8 +44,12 @@ interface KelasRecord {
     id: number;
     nama_kelas: string;
     full_nama_kelas: string;
-    stats: { hadir: number; sakit: number; izin: number };
-    total_diabsen: number;
+    total_siswa: number;
+    hadir: number;
+    sakit: number;
+    izin: number;
+    guru: { id: number; nama: string } | null;
+    updated_at: string | null;
 }
 
 interface Props {
@@ -141,34 +145,53 @@ export default function StatistikIndex({
         () => (!isKelasView ? (records as RecordItem[]) : []),
         [isKelasView, records],
     );
-    // Urutkan dari NISN agar stabil dan tidak bergantung pada keterangan
-    const siswaRecordsSorted = [...rawSiswaRecords].sort((a, b) => {
-        const nisnA = a.siswa?.nisn ?? '';
-        const nisnB = b.siswa?.nisn ?? '';
+    // Kelompokkan per kelas, lalu urutkan nama siswa A-Z di dalam kelas
+    const siswaRecordsSorted = useMemo(
+        () =>
+            [...rawSiswaRecords].sort((a, b) => {
+                const kelasA =
+                    a.kelas?.nama_kelas ?? a.kelas?.full_nama_kelas ?? '';
+                const kelasB =
+                    b.kelas?.nama_kelas ?? b.kelas?.full_nama_kelas ?? '';
+                const kelasOrder = kelasA.localeCompare(kelasB, 'id', {
+                    numeric: true,
+                    sensitivity: 'base',
+                });
 
-        if (nisnA && nisnB && !isNaN(Number(nisnA)) && !isNaN(Number(nisnB))) {
-            return Number(nisnA) - Number(nisnB);
-        }
+                if (kelasOrder !== 0) {
+                    return kelasOrder;
+                }
 
-        return nisnA.localeCompare(nisnB);
-    });
+                return (a.siswa?.nama ?? '').localeCompare(
+                    b.siswa?.nama ?? '',
+                    'id',
+                    { numeric: true, sensitivity: 'base' },
+                );
+            }),
+        [rawSiswaRecords],
+    );
+    const kelasRecordsSorted = useMemo(
+        () =>
+            [...kelasRecordsRaw].sort((a, b) =>
+                a.full_nama_kelas.localeCompare(b.full_nama_kelas, 'id'),
+            ),
+        [kelasRecordsRaw],
+    );
 
     // Palette warna: tiap kelas berbeda warna
     const kelasColorMap = useMemo(() => {
         const map = new Map<number, string>();
         let idx = 0;
 
-        for (const r of siswaRecordsSorted) {
-            const id = r.kelas?.id ?? 0;
-
-            if (!map.has(id)) {
-                map.set(id, kelasPalette[idx % kelasPalette.length]);
+        for (const k of kelasRecordsSorted) {
+            if (!map.has(k.id)) {
+                map.set(k.id, kelasPalette[idx % kelasPalette.length]);
                 idx++;
             }
         }
 
         return map;
-    }, [siswaRecordsSorted]);
+    }, [kelasRecordsSorted]);
 
     const getKelasBadgeClass = (kelasId?: number | null) => {
         return kelasColorMap.get(kelasId ?? 0) ?? kelasPalette[0];
@@ -201,49 +224,23 @@ export default function StatistikIndex({
         });
     }, [siswaRecordsSorted, searchQuery]);
 
-    // Search filter untuk kelas view (nama kelas)
+    // Search filter untuk kelas records (nama kelas)
     const filteredKelasRecords = useMemo(() => {
         if (!searchQuery.trim()) {
-            return kelasRecordsRaw;
+            return kelasRecordsSorted;
         }
 
         const q = searchQuery.toLowerCase();
 
-        return kelasRecordsRaw.filter((k) => {
-            const haystack = [k.full_nama_kelas ?? '', k.nama_kelas ?? '']
+        return kelasRecordsSorted.filter((k) =>
+            [k.full_nama_kelas ?? '', k.nama_kelas ?? '']
                 .join(' ')
-                .toLowerCase();
-
-            return haystack.includes(q);
-        });
-    }, [kelasRecordsRaw, searchQuery]);
+                .toLowerCase()
+                .includes(q),
+        );
+    }, [kelasRecordsSorted, searchQuery]);
 
     const showKeterangan = !isKelasView && status === 'izin';
-
-    const formatTanggal = (iso?: string | null) => {
-        if (!iso) {
-            return '-';
-        }
-
-        try {
-            const d = new Date(`${iso}T00:00:00`);
-
-            if (isNaN(d.getTime())) {
-                return iso;
-            }
-
-            const hari = d.toLocaleDateString('id-ID', {
-                weekday: 'long',
-            });
-            const dd = String(d.getDate()).padStart(2, '0');
-            const mm = String(d.getMonth() + 1).padStart(2, '0');
-            const yyyy = d.getFullYear();
-
-            return `${hari}, ${dd}-${mm}-${yyyy}`;
-        } catch {
-            return iso;
-        }
-    };
 
     // Samain persis dengan lihat absensi (guru/data.tsx) — waktu update = jam guru terakhir submit (WIB)
     const formatJam = (iso?: string | null) => {
@@ -273,7 +270,7 @@ export default function StatistikIndex({
 
     return (
         <>
-            <Head title={`Statistik ${status} - ${tanggal}`} />
+            <Head title={`Statistik ${status} - ${formatTanggalLengkap(tanggal)}`} />
             <div className="flex h-full w-full flex-1 flex-col gap-6 p-8">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-center gap-3">
@@ -315,49 +312,51 @@ export default function StatistikIndex({
                 </div>
 
                 {/* Ringkasan kecil */}
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                    <Card className="border-sidebar-border/60">
-                        <CardContent className="p-3">
-                            <p className="text-xs text-muted-foreground">
-                                Tanggal
-                            </p>
-                            <p className="font-mono text-sm font-bold">
-                                {formatTanggal(tanggal)}
-                            </p>
-                        </CardContent>
-                    </Card>
-                    <Card className="border-sidebar-border/60">
-                        <CardContent className="p-3">
-                            <p className="text-xs text-muted-foreground">
-                                Total {isKelasView ? 'Kelas' : 'Siswa'}
-                            </p>
-                            <p className="text-sm font-bold">
-                                {total} {isKelasView ? 'kelas' : 'siswa'}
-                            </p>
-                        </CardContent>
-                    </Card>
-                    <Card className="border-sidebar-border/60">
-                        <CardContent className="p-3">
-                            <p className="text-xs text-muted-foreground">
-                                Total Kelas
-                            </p>
-                            <p className="text-sm font-bold">
-                                {kelasSudahAbsen} kelas
-                            </p>
-                        </CardContent>
-                    </Card>
-                    <Card className="border-sidebar-border/60">
-                        <CardContent className="p-3">
-                            <p className="text-xs text-muted-foreground">
-                                Status
-                            </p>
-                            <p className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                                {status.charAt(0).toUpperCase() +
-                                    status.slice(1)}
-                            </p>
-                        </CardContent>
-                    </Card>
-                </div>
+                {!isKelasView && (
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                        <Card className="border-sidebar-border/60">
+                            <CardContent className="p-3">
+                                <p className="text-xs text-muted-foreground">
+                                    Tanggal
+                                </p>
+                                <p className="text-sm font-bold">
+                                    {formatTanggalLengkap(tanggal)}
+                                </p>
+                            </CardContent>
+                        </Card>
+                        <Card className="border-sidebar-border/60">
+                            <CardContent className="p-3">
+                                <p className="text-xs text-muted-foreground">
+                                    Total {isKelasView ? 'Kelas' : 'Siswa'}
+                                </p>
+                                <p className="text-sm font-bold">
+                                    {total} {isKelasView ? 'kelas' : 'siswa'}
+                                </p>
+                            </CardContent>
+                        </Card>
+                        <Card className="border-sidebar-border/60">
+                            <CardContent className="p-3">
+                                <p className="text-xs text-muted-foreground">
+                                    Total Kelas
+                                </p>
+                                <p className="text-sm font-bold">
+                                    {kelasSudahAbsen} kelas
+                                </p>
+                            </CardContent>
+                        </Card>
+                        <Card className="border-sidebar-border/60">
+                            <CardContent className="p-3">
+                                <p className="text-xs text-muted-foreground">
+                                    Status
+                                </p>
+                                <p className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                                    {status.charAt(0).toUpperCase() +
+                                        status.slice(1)}
+                                </p>
+                            </CardContent>
+                        </Card>
+                    </div>
+                )}
 
                 {isKelasView ? (
                     <Card>
@@ -384,22 +383,28 @@ export default function StatistikIndex({
                                     <TableHeader>
                                         <TableRow>
                                             <TableHead className="w-[55px] text-center">
-                                                No.
+                                                NO
                                             </TableHead>
                                             <TableHead className="min-w-[180px]">
-                                                Kelas
+                                                KELAS
                                             </TableHead>
-                                            <TableHead className="w-[110px] text-center">
-                                                Total Diabsen
-                                            </TableHead>
-                                            <TableHead className="w-[90px] text-center">
-                                                Hadir
+                                            <TableHead className="w-[120px] text-center">
+                                                TOTAL SISWA
                                             </TableHead>
                                             <TableHead className="w-[90px] text-center">
-                                                Sakit
+                                                HADIR
                                             </TableHead>
                                             <TableHead className="w-[90px] text-center">
-                                                Izin
+                                                SAKIT
+                                            </TableHead>
+                                            <TableHead className="w-[90px] text-center">
+                                                IZIN
+                                            </TableHead>
+                                            <TableHead className="min-w-[140px]">
+                                                GURU
+                                            </TableHead>
+                                            <TableHead className="w-[150px] text-center">
+                                                WAKTU PEMBARUAN
                                             </TableHead>
                                         </TableRow>
                                     </TableHeader>
@@ -407,7 +412,7 @@ export default function StatistikIndex({
                                         {filteredKelasRecords.length === 0 ? (
                                             <TableRow>
                                                 <TableCell
-                                                    colSpan={6}
+                                                    colSpan={8}
                                                     className="h-24 text-center text-muted-foreground"
                                                 >
                                                     {searchQuery
@@ -431,16 +436,25 @@ export default function StatistikIndex({
                                                             {k.full_nama_kelas}
                                                         </TableCell>
                                                         <TableCell className="text-center font-bold">
-                                                            {k.total_diabsen}
+                                                            {k.total_siswa}
                                                         </TableCell>
                                                         <TableCell className="text-center font-medium text-emerald-600">
-                                                            {k.stats.hadir}
+                                                            {k.hadir}
                                                         </TableCell>
                                                         <TableCell className="text-center font-medium text-blue-600">
-                                                            {k.stats.sakit}
+                                                            {k.sakit}
                                                         </TableCell>
                                                         <TableCell className="text-center font-medium text-orange-600">
-                                                            {k.stats.izin}
+                                                            {k.izin}
+                                                        </TableCell>
+                                                        <TableCell className="text-xs whitespace-nowrap">
+                                                            {k.guru?.nama ??
+                                                                '-'}
+                                                        </TableCell>
+                                                        <TableCell className="text-center font-mono text-xs whitespace-nowrap">
+                                                            {formatJam(
+                                                                k.updated_at,
+                                                            )}
                                                         </TableCell>
                                                     </TableRow>
                                                 ),
@@ -449,6 +463,12 @@ export default function StatistikIndex({
                                     </TableBody>
                                 </Table>
                             </div>
+                            {searchQuery && filteredKelasRecords.length > 0 && (
+                                <p className="mt-2 text-xs text-muted-foreground">
+                                    Menampilkan {filteredKelasRecords.length}{' '}
+                                    dari {kelasRecordsSorted.length} data
+                                </p>
+                            )}
                         </CardContent>
                     </Card>
                 ) : (
@@ -475,31 +495,31 @@ export default function StatistikIndex({
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead className="w-[50px] text-center">
-                                                No.
+                                            <TableHead className="w-[55px] text-center">
+                                                NO
                                             </TableHead>
-                                            <TableHead className="min-w-[200px]">
-                                                Nama Siswa
-                                            </TableHead>
-                                            <TableHead className="w-[160px] min-w-[140px]">
+                                            <TableHead className="w-[120px]">
                                                 NISN
                                             </TableHead>
+                                            <TableHead className="min-w-[200px]">
+                                                NAMA
+                                            </TableHead>
                                             <TableHead className="min-w-[150px]">
-                                                Kelas
+                                                KELAS
                                             </TableHead>
                                             <TableHead className="w-[110px] text-center">
-                                                Status
+                                                STATUS
                                             </TableHead>
                                             <TableHead className="min-w-[140px]">
-                                                Guru
+                                                GURU
                                             </TableHead>
                                             {showKeterangan && (
                                                 <TableHead className="min-w-[180px]">
-                                                    Keterangan
+                                                    KETERANGAN
                                                 </TableHead>
                                             )}
-                                            <TableHead className="w-[120px] text-center">
-                                                Jam Terbaru
+                                            <TableHead className="w-[150px] text-center">
+                                                WAKTU PEMBARUAN
                                             </TableHead>
                                         </TableRow>
                                     </TableHeader>
@@ -534,6 +554,11 @@ export default function StatistikIndex({
                                                         >
                                                             <TableCell className="text-center text-muted-foreground">
                                                                 {idx + 1}
+                                                            </TableCell>
+                                                            <TableCell className="font-mono text-xs font-medium">
+                                                                {r.siswa
+                                                                    ?.nisn ??
+                                                                    '-'}
                                                             </TableCell>
                                                             <TableCell>
                                                                 <div className="flex items-center gap-2">
@@ -576,11 +601,6 @@ export default function StatistikIndex({
                                                                             '-'}
                                                                     </span>
                                                                 </div>
-                                                            </TableCell>
-                                                            <TableCell className="font-mono text-xs font-medium">
-                                                                {r.siswa
-                                                                    ?.nisn ??
-                                                                    '-'}
                                                             </TableCell>
                                                             <TableCell>
                                                                 <span

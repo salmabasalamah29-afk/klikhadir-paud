@@ -90,6 +90,17 @@ class StatistikController extends Controller
 
         $absensis = $allLatest
             ->where('status', $status)
+            ->sort(function (Absensi $a, Absensi $b): int {
+                $kelasA = $a->siswa?->kelas?->nama_kelas ?? '';
+                $kelasB = $b->siswa?->kelas?->nama_kelas ?? '';
+
+                $kelasOrder = strnatcasecmp($kelasA, $kelasB);
+                if ($kelasOrder !== 0) {
+                    return $kelasOrder;
+                }
+
+                return strnatcasecmp($a->siswa?->nama ?? '', $b->siswa?->nama ?? '');
+            })
             ->values()
             ->map(function ($absensi) {
                 $siswa = $absensi->siswa;
@@ -143,66 +154,72 @@ class StatistikController extends Controller
 
     private function kelasDetail(string $tanggal, ?array $activeYear = null, bool $isOutOfYear = false)
     {
-        // Ambil distinct kelas yang sudah diabsen di tanggal tersebut, dengan ringkasan per status
-        $kelasIds = DB::table('absensis')
-            ->join('siswas', 'absensis.siswa_id', '=', 'siswas.id')
-            ->where('absensis.tanggal', $tanggal)
-            ->distinct()
-            ->pluck('siswas.kelas_id');
+        $rawAll = Absensi::with(['siswa', 'guru'])
+            ->where('tanggal', $tanggal)
+            ->orderBy('updated_at', 'desc')
+            ->orderBy('id', 'desc')
+            ->get();
 
-        $kelasList = Kelas::whereIn('id', $kelasIds)->orderBy('id')->get()->map(function ($kelas) use ($tanggal) {
-            // Hitung berdasarkan data terbaru per siswa - samain kaya lihat absensi
-            $rawInKelas = Absensi::where('tanggal', $tanggal)
-                ->whereHas('siswa', fn ($q) => $q->where('kelas_id', $kelas->id))
-                ->orderBy('updated_at', 'desc')
-                ->orderBy('id', 'desc')
-                ->get();
-            $latestInKelas = $rawInKelas->groupBy('siswa_id')->map(function ($group) {
-                $sorted = $group->sort(function ($a, $b) {
-                    $ta = $a->updated_at ? $a->updated_at->getTimestamp() : 0;
-                    $tb = $b->updated_at ? $b->updated_at->getTimestamp() : 0;
-                    if ($ta === $tb) {
-                        return $b->id <=> $a->id;
-                    }
+        $latestPerSiswa = $rawAll->groupBy('siswa_id')->map(function ($group) {
+            $sorted = $group->sort(function ($a, $b) {
+                $ta = $a->updated_at ? $a->updated_at->getTimestamp() : 0;
+                $tb = $b->updated_at ? $b->updated_at->getTimestamp() : 0;
+                if ($ta === $tb) {
+                    return $b->id <=> $a->id;
+                }
 
-                    return $tb <=> $ta;
-                })->values();
-                $berhalangan = $sorted->first(function ($it) {
-                    return in_array($it->status, ['sakit', 'izin'], true);
-                });
+                return $tb <=> $ta;
+            })->values();
+            $berhalangan = $sorted->first(function ($it) {
+                return in_array($it->status, ['sakit', 'izin'], true);
+            });
 
-                return $berhalangan ?? $sorted->first();
-            })->filter()->values();
+            return $berhalangan ?? $sorted->first();
+        })->filter()->values();
 
-            $statsGrouped = $latestInKelas->groupBy('status')->map->count()->toArray();
-            $stats = $statsGrouped;
+        $kelasIds = $latestPerSiswa
+            ->map(fn ($absensi) => $absensi->siswa?->kelas_id)
+            ->filter()
+            ->unique()
+            ->values();
 
-            $totalSiswaDiabsen = $latestInKelas->count();
+        $records = Kelas::whereIn('id', $kelasIds)
+            ->withCount(['siswas' => fn ($query) => $query->where('is_alumni', false)])
+            ->orderBy('id')
+            ->get()
+            ->map(function (Kelas $kelas) use ($latestPerSiswa) {
+                $latestInKelas = $latestPerSiswa->filter(
+                    fn ($absensi) => $absensi->siswa?->kelas_id === $kelas->id
+                );
 
-            return [
-                'id' => $kelas->id,
-                'nama_kelas' => $kelas->nama_kelas,
-                'full_nama_kelas' => $kelas->full_nama_kelas,
-                'stats' => [
-                    'hadir' => $stats['hadir'] ?? 0,
-                    'sakit' => $stats['sakit'] ?? 0,
-                    'izin' => $stats['izin'] ?? 0,
-                ],
-                'total_diabsen' => $totalSiswaDiabsen,
-            ];
-        });
+                $stats = $latestInKelas->groupBy('status')->map->count();
+                $latestRecord = $latestInKelas->sortByDesc('updated_at')->first();
+                $guru = $latestRecord?->guru;
 
-        // Untuk header, ambil juga records untuk view yang mirip siswa history tapi aggregated
-        // Kita tetap kirim records kosong, frontend akan handle isKelas=true
-        $kelasSudahAbsen = $kelasList->count();
-        $totalKelas = Kelas::count();
+                return [
+                    'id' => $kelas->id,
+                    'nama_kelas' => $kelas->nama_kelas,
+                    'full_nama_kelas' => $kelas->full_nama_kelas,
+                    'total_siswa' => $kelas->siswas_count,
+                    'hadir' => $stats->get('hadir', 0),
+                    'sakit' => $stats->get('sakit', 0),
+                    'izin' => $stats->get('izin', 0),
+                    'guru' => $guru ? [
+                        'id' => $guru->id,
+                        'nama' => $guru->nama,
+                    ] : null,
+                    'updated_at' => $latestRecord?->updated_at?->timezone('Asia/Jakarta')->format('Y-m-d H:i:s'),
+                ];
+            });
+
+        $kelasSudahAbsen = $records->count();
 
         return Inertia::render('admin/statistik/index', [
             'tanggal' => $tanggal,
             'status' => 'kelas',
-            'records' => $kelasList,
+            'records' => $records,
             'total' => $kelasSudahAbsen,
-            'totalKelas' => $totalKelas,
+            'totalKelas' => Kelas::count(),
             'kelasSudahAbsen' => $kelasSudahAbsen,
             'isKelas' => true,
             'activeYear' => $activeYear,

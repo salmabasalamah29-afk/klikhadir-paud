@@ -23,7 +23,6 @@ beforeEach(function () {
     $this->siswa = Siswa::create([
         'user_id' => $siswaUser->id,
         'kelas_id' => $this->kelas->id,
-        'nis' => '25001',
         'nisn' => '0025001',
         'nama' => 'Siswa Satu',
         'is_alumni' => false,
@@ -77,12 +76,43 @@ test('semua status statistik PAUD dapat dibuka', function (string $status) {
         );
 })->with(['hadir', 'sakit', 'izin', 'kelas']);
 
-test('statistik kelas hanya merangkum status PAUD', function () {
+test('statistik kelas menampilkan rekap jumlah siswa per status', function () {
+    $siswaHadir = Siswa::create([
+        'user_id' => User::factory()->create(['role' => 'siswa', 'username' => 'siswa-dua'])->id,
+        'kelas_id' => $this->kelas->id,
+        'nisn' => '0025002',
+        'nama' => 'Siswa Dua',
+        'is_alumni' => false,
+    ]);
+
+    $siswaSakit = Siswa::create([
+        'user_id' => User::factory()->create(['role' => 'siswa', 'username' => 'siswa-tiga'])->id,
+        'kelas_id' => $this->kelas->id,
+        'nisn' => '0025003',
+        'nama' => 'Siswa Tiga',
+        'is_alumni' => false,
+    ]);
+
     Absensi::create([
         'siswa_id' => $this->siswa->id,
         'guru_id' => $this->guru->id,
         'tanggal' => $this->tanggal,
+        'status' => 'izin',
+        'keterangan' => 'Acara keluarga',
+    ]);
+
+    Absensi::create([
+        'siswa_id' => $siswaHadir->id,
+        'guru_id' => $this->guru->id,
+        'tanggal' => $this->tanggal,
         'status' => 'hadir',
+    ]);
+
+    Absensi::create([
+        'siswa_id' => $siswaSakit->id,
+        'guru_id' => $this->guru->id,
+        'tanggal' => $this->tanggal,
+        'status' => 'sakit',
     ]);
 
     $this->get(route('admin.statistik', ['status' => 'kelas', 'tanggal' => $this->tanggal]))
@@ -90,16 +120,63 @@ test('statistik kelas hanya merangkum status PAUD', function () {
         ->assertInertia(fn (Assert $page) => $page
             ->component('admin/statistik/index')
             ->where('isKelas', true)
+            ->where('total', 1)
             ->where('records.0.nama_kelas', 'Kelompok A')
-            ->where('records.0.stats.hadir', 1)
-            ->where('records.0.stats.sakit', 0)
-            ->where('records.0.stats.izin', 0)
-            ->missing('records.0.stats.alpha')
-            ->missing('records.0.stats.dispensasi')
-            ->missing('records.0.tingkat')
-            ->missing('records.0.jurusan_singkatan')
+            ->where('records.0.full_nama_kelas', 'Kelompok A')
+            ->where('records.0.total_siswa', 3)
+            ->where('records.0.hadir', 1)
+            ->where('records.0.sakit', 1)
+            ->where('records.0.izin', 1)
+            ->where('records.0.guru.nama', 'Guru Satu')
+            ->has('records.0.updated_at')
+            ->missing('records.0.siswa')
+            ->missing('records.0.status')
         );
 });
+
+test('statistik detail status mengurutkan berdasarkan kelas lalu nama siswa', function (string $status) {
+    $kelasB = Kelas::create(['nama_kelas' => 'TK B']);
+    $kelasA = Kelas::create(['nama_kelas' => 'TK A']);
+
+    $siswas = [
+        ['kelas' => $kelasB, 'nama' => 'Zaki', 'nisn' => '0025010', 'username' => 'zaki'],
+        ['kelas' => $kelasA, 'nama' => 'Budi', 'nisn' => '0025011', 'username' => 'budi'],
+        ['kelas' => $kelasB, 'nama' => 'Citra', 'nisn' => '0025012', 'username' => 'citra'],
+        ['kelas' => $kelasA, 'nama' => 'Ani', 'nisn' => '0025013', 'username' => 'ani'],
+    ];
+
+    foreach ($siswas as $data) {
+        $siswa = Siswa::create([
+            'user_id' => User::factory()->create(['role' => 'siswa', 'username' => $data['username']])->id,
+            'kelas_id' => $data['kelas']->id,
+            'nisn' => $data['nisn'],
+            'nama' => $data['nama'],
+            'is_alumni' => false,
+        ]);
+
+        Absensi::create([
+            'siswa_id' => $siswa->id,
+            'guru_id' => $this->guru->id,
+            'tanggal' => $this->tanggal,
+            'status' => $status,
+        ]);
+    }
+
+    $this->get(route('admin.statistik', ['status' => $status, 'tanggal' => $this->tanggal]))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('admin/statistik/index')
+            ->where('total', 4)
+            ->where('records.0.siswa.nama', 'Ani')
+            ->where('records.0.kelas.nama_kelas', 'TK A')
+            ->where('records.1.siswa.nama', 'Budi')
+            ->where('records.1.kelas.nama_kelas', 'TK A')
+            ->where('records.2.siswa.nama', 'Citra')
+            ->where('records.2.kelas.nama_kelas', 'TK B')
+            ->where('records.3.siswa.nama', 'Zaki')
+            ->where('records.3.kelas.nama_kelas', 'TK B')
+        );
+})->with(['hadir', 'sakit', 'izin']);
 
 test('status alpha dan dispensasi tidak lagi tersedia', function (string $status) {
     $this->get(route('admin.statistik', ['status' => $status, 'tanggal' => $this->tanggal]))
