@@ -1,18 +1,17 @@
 import { Head, Link } from '@inertiajs/react';
-import { FileSpreadsheet, GraduationCap, ArrowLeft, Calendar, Users, CheckCircle, Clock, FileWarning, XCircle, Award, ImageUp, Download } from 'lucide-react';
+import { FileSpreadsheet, GraduationCap, ArrowLeft, Calendar, Users, CheckCircle, Clock, FileWarning } from 'lucide-react';
 import { useState, useMemo } from 'react';
-import { Button } from '@/components/ui/button';
+import DateInput, { formatTanggalLengkap } from '@/components/date-input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
-import DateInput, { formatTanggalIndo } from '@/components/date-input';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { useAutoRefresh } from '@/hooks/use-auto-refresh';
 import { dashboard as adminDashboard } from '@/routes/admin';
 import adminTahunAjaran from '@/routes/admin/tahun-ajaran';
 
 interface ArsipRecord {
   id: number;
-  nis: string;
+  nisn: string;
   nama: string;
   foto_url: string | null;
   kelas: string;
@@ -24,37 +23,34 @@ interface ArsipRecord {
   mapel: string;
   guru: string;
   keterangan: string | null;
-  bukti: string | null;
 }
 
 export default function ArsipDetail({ tahunAjaran, kelas, records, stats }: { tahunAjaran: any; kelas: any; records: ArsipRecord[]; stats: any }) {
   useAutoRefresh(true, 5000);
   const [selectedDate, setSelectedDate] = useState<string>('');
-  const [previewBukti, setPreviewBukti] = useState<{ url: string; id: number; nama?: string; status?: string; tanggal?: string; kelasNama?: string } | null>(null);
 
   const filtered = useMemo(() => {
-    if (!selectedDate) return [];
+    if (!selectedDate) {
+return [];
+}
+
     return records.filter((r) => r.tanggal === selectedDate);
   }, [records, selectedDate]);
 
   const filteredStats = useMemo(() => {
-    const c: Record<string, number> = { hadir: 0, sakit: 0, izin: 0, alpha: 0, dispensasi: 0 };
-    filtered.forEach((r) => { if (c[r.status] !== undefined) c[r.status]++; });
+    const c: Record<string, number> = { hadir: 0, sakit: 0, izin: 0 };
+    filtered.forEach((r) => {
+        if (c[r.status] !== undefined) {
+            c[r.status]++;
+        }
+    });
+
     return c;
   }, [filtered]);
 
   const showStats = selectedDate ? filteredStats : stats;
 
   const hasKeterangan = filtered.some((r) => r.keterangan != null && r.keterangan.toString().trim() !== '');
-  const hasBukti = filtered.some((r) => ['izin', 'sakit', 'dispensasi'].includes(r.status));
-
-  const getSuratLabel = (status: string, nama: string | undefined, kelasNama: string | undefined, tanggal: string | undefined) => {
-    const jenis = status ? status.charAt(0).toUpperCase() + status.slice(1) : 'Surat';
-    const nm = nama ? nama.toUpperCase().replace(/\s+/g, ' ').trim() : 'SISWA';
-    const kls = kelasNama ?? kelas?.full_nama_kelas ?? '-';
-    const tgl = formatTanggalIndo(tanggal ?? selectedDate);
-    return `${jenis}-${nm}-${kls}-${tgl}`;
-  };
 
   const StatusBadge = ({ status }: { status: string }) => {
     switch (status) {
@@ -64,19 +60,9 @@ export default function ArsipDetail({ tahunAjaran, kelas, records, stats }: { ta
         return <span className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-600/20"><Clock className="h-3 w-3" /> Sakit</span>;
       case 'izin':
         return <span className="inline-flex items-center gap-1 rounded-md bg-orange-50 px-2 py-1 text-xs font-medium text-orange-700 ring-1 ring-inset ring-orange-600/20"><FileWarning className="h-3 w-3" /> Izin</span>;
-      case 'alpha':
-        return <span className="inline-flex items-center gap-1 rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/20"><XCircle className="h-3 w-3" /> Alpha</span>;
-      case 'dispensasi':
-        return <span className="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-700 ring-1 ring-inset ring-indigo-600/20"><Award className="h-3 w-3" /> Dispensasi</span>;
       default:
         return <span>{status}</span>;
     }
-  };
-
-  const hari = (iso: string) => {
-    if (!iso) return '-';
-    const d = new Date(iso + 'T00:00:00');
-    return d.toLocaleDateString('id-ID', { weekday: 'long' });
   };
 
   const totalFiltered = filtered.length;
@@ -113,17 +99,15 @@ export default function ArsipDetail({ tahunAjaran, kelas, records, stats }: { ta
           </div>
 
           <div className="col-span-1 flex flex-col gap-6 lg:col-span-2">
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-              <div className="rounded-xl border bg-card p-3 shadow-sm text-center"><p className="text-xs text-muted-foreground">Hadir</p><p className="text-xl font-bold text-emerald-600">{showStats.hadir}</p></div>
-              <div className="rounded-xl border bg-card p-3 shadow-sm text-center"><p className="text-xs text-muted-foreground">Sakit</p><p className="text-xl font-bold text-blue-600">{showStats.sakit}</p></div>
-              <div className="rounded-xl border bg-card p-3 shadow-sm text-center"><p className="text-xs text-muted-foreground">Izin</p><p className="text-xl font-bold text-orange-600">{showStats.izin}</p></div>
-              <div className="rounded-xl border bg-card p-3 shadow-sm text-center"><p className="text-xs text-muted-foreground">Alpha</p><p className="text-xl font-bold text-red-600">{showStats.alpha}</p></div>
-              <div className="rounded-xl border bg-card p-3 shadow-sm text-center"><p className="text-xs text-muted-foreground">Dispensasi</p><p className="text-xl font-bold text-indigo-600">{showStats.dispensasi}</p></div>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="rounded-xl border bg-card p-4 shadow-sm text-center"><p className="text-xs text-muted-foreground">Hadir</p><p className="text-2xl font-bold text-emerald-600">{showStats.hadir}</p></div>
+              <div className="rounded-xl border bg-card p-4 shadow-sm text-center"><p className="text-xs text-muted-foreground">Sakit</p><p className="text-2xl font-bold text-blue-600">{showStats.sakit}</p></div>
+              <div className="rounded-xl border bg-card p-4 shadow-sm text-center"><p className="text-xs text-muted-foreground">Izin</p><p className="text-2xl font-bold text-orange-600">{showStats.izin}</p></div>
             </div>
 
             {selectedDate && (
               <div className="flex flex-wrap gap-2 text-xs text-muted-foreground items-center">
-                <span className="inline-flex items-center gap-1 rounded-full border px-3 py-1 bg-muted/30"><Calendar className="h-3 w-3" /> {formatTanggalIndo(selectedDate)} ({hari(selectedDate)})</span>
+                <span className="inline-flex items-center gap-1 rounded-full border px-3 py-1 bg-muted/30"><Calendar className="h-3 w-3" /> {formatTanggalLengkap(selectedDate)}</span>
                 <span className="inline-flex items-center gap-1 rounded-full border px-3 py-1 bg-muted/30"><GraduationCap className="h-3 w-3" /> {kelas.full_nama_kelas}</span>
                 <span className="inline-flex items-center gap-1 rounded-full border px-3 py-1 bg-muted/30">total: {totalFiltered} siswa</span>
               </div>
@@ -138,22 +122,21 @@ export default function ArsipDetail({ tahunAjaran, kelas, records, stats }: { ta
 
             {selectedDate ? (
               <div className="rounded-xl border border-sidebar-border/70 bg-card shadow-sm dark:border-sidebar-border overflow-hidden flex flex-col">
-                <div className="px-4 py-3 border-b bg-muted/20 flex items-center gap-2 text-sm font-semibold"><GraduationCap className="h-4 w-4" /> {kelas.full_nama_kelas} — {hari(selectedDate)}, {formatTanggalIndo(selectedDate)}</div>
+                <div className="px-4 py-3 border-b bg-muted/20 flex items-center gap-2 text-sm font-semibold"><GraduationCap className="h-4 w-4" /> {kelas.full_nama_kelas} — {formatTanggalLengkap(selectedDate)}</div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm">
                     <thead className="bg-muted/50 text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       <tr>
                         <th className="px-3 py-3 w-10 text-center">No</th>
-                        <th className="px-2 py-3 w-[72px] text-center whitespace-nowrap">NIS</th>
+                        <th className="px-2 py-3 w-[72px] text-center whitespace-nowrap">NISN</th>
                         <th className="px-4 py-3 min-w-[160px]">Nama Siswa</th>
                         <th className="px-4 py-3">Status</th>
                         {hasKeterangan && <th className="px-4 py-3 min-w-[140px]">Keterangan</th>}
-                        {hasBukti && <th className="px-4 py-3">Bukti</th>}
                       </tr>
                     </thead>
                     <tbody className="divide-y">
                       {filtered.length === 0 ? (
-                        <tr><td colSpan={4 + (hasKeterangan ? 1 : 0) + (hasBukti ? 1 : 0)} className="px-6 py-12 text-center text-muted-foreground"><div className="flex flex-col items-center gap-2"><Users className="h-8 w-8 opacity-20" /><p>Tidak ada data pada tanggal ini.</p></div></td></tr>
+                        <tr><td colSpan={4 + (hasKeterangan ? 1 : 0)} className="px-6 py-12 text-center text-muted-foreground"><div className="flex flex-col items-center gap-2"><Users className="h-8 w-8 opacity-20" /><p>Tidak ada data pada tanggal ini.</p></div></td></tr>
                       ) : (
                         filtered.map((r, i) => (
                           <tr key={`${r.id}-${r.tanggal}`} className="hover:bg-muted/30">
@@ -161,26 +144,12 @@ export default function ArsipDetail({ tahunAjaran, kelas, records, stats }: { ta
                             <td className="px-2 py-3 font-mono text-[11px] whitespace-nowrap tracking-tight text-center">
                               <div className="flex items-center justify-center gap-1.5">
                                 <Avatar className="size-6 shrink-0"><AvatarImage src={r.foto_url ?? undefined} /><AvatarFallback className="text-[9px]">{r.nama?.slice(0, 2)?.toUpperCase()}</AvatarFallback></Avatar>
-                                <span>{r.nis}</span>
+                                <span>{r.nisn}</span>
                               </div>
                             </td>
                             <td className="px-4 py-3 font-medium text-xs">{r.nama} {r.is_alumni && <span className="ml-1 rounded bg-amber-100 px-1 py-0.5 text-[9px] font-medium text-amber-700">Alumni</span>}</td>
                             <td className="px-4 py-3"><StatusBadge status={r.status} /></td>
-                            {hasKeterangan && <td className="px-4 py-3 text-xs truncate max-w-[180px]" title={r.keterangan || ''}>{r.status === 'alpha' && r.keterangan ? r.keterangan : '-'}</td>}
-                            {hasBukti && (
-                              <td className="px-4 py-3">
-                                {r.bukti ? (
-                                  <button
-                                    onClick={() => setPreviewBukti({ url: `/storage/${r.bukti}`, id: r.id, nama: r.nama, status: r.status, tanggal: r.tanggal, kelasNama: r.kelas })}
-                                    className="group relative h-8 w-8 shrink-0 overflow-hidden rounded-md border bg-muted/20 shadow-sm hover:ring-2 hover:ring-primary/20 transition-all"
-                                    title="Lihat surat"
-                                  >
-                                    <img src={`/storage/${r.bukti}`} alt={`Bukti ${r.status}`} className="h-full w-full object-cover" loading="lazy" decoding="async" onError={(e) => {(e.currentTarget as HTMLImageElement).style.display = 'none';}} />
-                                    <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/10"><ImageUp className="h-2.5 w-2.5 text-white opacity-0 group-hover:opacity-100" /></span>
-                                  </button>
-                                ) : <span className="text-xs text-muted-foreground">-</span>}
-                              </td>
-                            )}
+                            {hasKeterangan && <td className="px-4 py-3 text-xs truncate max-w-[180px]" title={r.keterangan || ''}>{r.keterangan || '-'}</td>}
                           </tr>
                         ))
                       )}
@@ -194,30 +163,6 @@ export default function ArsipDetail({ tahunAjaran, kelas, records, stats }: { ta
           </div>
         </div>
       </div>
-
-      <Dialog open={previewBukti !== null} onOpenChange={(o) => { if (!o) setPreviewBukti(null); }}>
-        <DialogContent className="sm:max-w-[400px] w-auto max-h-[85vh] bg-transparent border-none shadow-none p-1 sm:p-2 [&>button]:hidden">
-          {previewBukti && (
-            <div className="bg-card rounded-xl px-4 py-4 shadow-2xl flex flex-col gap-4 relative w-auto max-w-[400px] mx-auto aspect-square justify-center">
-              <button onClick={() => setPreviewBukti(null)} className="absolute left-4 top-4 h-8 w-8 rounded-full bg-muted hover:bg-accent flex items-center justify-center transition-colors" aria-label="Kembali">
-                <ArrowLeft className="h-4 w-4" />
-              </button>
-              <div className="text-center">
-                <h3 className="text-base font-semibold">Surat {previewBukti.status ? previewBukti.status.charAt(0).toUpperCase() + previewBukti.status.slice(1) : 'Presensi'}</h3>
-                <p className="text-xs text-muted-foreground mt-0.5 font-mono break-all">{getSuratLabel(previewBukti.status ?? 'surat', previewBukti.nama, previewBukti.kelasNama, previewBukti.tanggal)}.</p>
-              </div>
-              <div className="flex justify-center">
-                <img src={previewBukti.url} alt={`Surat ${previewBukti.status}`} className="max-w-full max-h-[50vh] rounded-lg object-contain" loading="eager" decoding="async" onError={(e) => {(e.currentTarget as HTMLImageElement).style.display = 'none';}} />
-              </div>
-              <div className="flex justify-center">
-                <a href={previewBukti.url} download={`${getSuratLabel(previewBukti.status ?? 'surat', previewBukti.nama, previewBukti.kelasNama, previewBukti.tanggal)}.${previewBukti.url.split('.').pop()?.split('?')[0] || 'png'}`} className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 shadow-lg">
-                  <Download className="h-4 w-4" /> unduh
-                </a>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </>
   );
 }

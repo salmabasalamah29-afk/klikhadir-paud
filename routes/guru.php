@@ -3,7 +3,6 @@
 use App\Http\Controllers\Export\AttendanceExportController;
 use App\Http\Controllers\Guru\AbsensiController;
 use App\Http\Controllers\Guru\DataAbsensiController;
-use App\Http\Controllers\Guru\DownloadBuktiController;
 use App\Http\Controllers\Guru\ExportPageController;
 use App\Http\Controllers\Guru\LihatPresensiController;
 use App\Http\Controllers\Guru\PresensiDiriController;
@@ -23,8 +22,6 @@ Route::middleware(['web', 'auth', 'role:guru', 'check.password.status'])->prefix
 
     Route::get('export', [ExportPageController::class, 'index'])->name('export.index');
     Route::get('export/download', [ExportPageController::class, 'export'])->name('export.download');
-
-    Route::get('download-bukti/{absensi}', [DownloadBuktiController::class, 'download'])->name('download-bukti');
 
     Route::get('presensi-diri', [PresensiDiriController::class, 'index'])->name('presensi-diri.index');
     Route::post('presensi-diri', [PresensiDiriController::class, 'store'])->name('presensi-diri.store');

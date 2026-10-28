@@ -31,6 +31,66 @@ export function formatTanggalIndo(value?: string | null): string {
     return formatIsoToDdMmYyyy(value) || '-';
 }
 
+const HARI_INDONESIA = [
+    'Minggu',
+    'Senin',
+    'Selasa',
+    'Rabu',
+    'Kamis',
+    'Jumat',
+    'Sabtu',
+];
+
+const BULAN_INDONESIA = [
+    'Januari',
+    'Februari',
+    'Maret',
+    'April',
+    'Mei',
+    'Juni',
+    'Juli',
+    'Agustus',
+    'September',
+    'Oktober',
+    'November',
+    'Desember',
+];
+
+/**
+ * Format tanggal lengkap standar Indonesia.
+ * '2026-01-10' -> 'Sabtu, 10 Januari 2026'
+ */
+export function formatTanggalLengkap(value?: string | null): string {
+    if (!value) {
+        return '-';
+    }
+
+    const match = value.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+
+    if (match) {
+        const year = Number(match[1]);
+        const month = Number(match[2]);
+        const day = Number(match[3]);
+        const date = new Date(year, month - 1, day);
+
+        if (
+            date.getFullYear() === year &&
+            date.getMonth() === month - 1 &&
+            date.getDate() === day
+        ) {
+            return `${HARI_INDONESIA[date.getDay()]}, ${day} ${BULAN_INDONESIA[month - 1]} ${year}`;
+        }
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return value;
+    }
+
+    return `${HARI_INDONESIA[date.getDay()]}, ${date.getDate()} ${BULAN_INDONESIA[date.getMonth()]} ${date.getFullYear()}`;
+}
+
 /** '26-01-2026' -> '2026-01-26' (null bila tidak valid) */
 export function ddMmYyyyToIso(text: string): string | null {
     const match = text.match(/^(\d{2})-(\d{2})-(\d{4})$/);

@@ -30,7 +30,7 @@ class AlumniController extends Controller
                 'full_nama_kelas' => $k->full_nama_kelas,
                 'nama_kelas' => $k->nama_kelas,
                 'alumni_count' => ArsipPresensi::where('tahun_ajaran_id', $tahunAjaran->id)->where('kelas_id', $k->id)->where('is_alumni', true)
-                    ->selectRaw('COUNT(DISTINCT COALESCE(siswa_nis, siswa_id)) as c')->value('c') ?? 0,
+                    ->selectRaw('COUNT(DISTINCT COALESCE(siswa_nisn, siswa_id)) as c')->value('c') ?? 0,
             ]);
 
         return Inertia::render('admin/alumni/kelas', ['tahunAjaran' => $tahunAjaran, 'kelasList' => $kelasList]);
@@ -40,10 +40,10 @@ class AlumniController extends Controller
     {
         $rows = ArsipPresensi::where('tahun_ajaran_id', $tahunAjaran->id)->where('kelas_id', $kelas->id)->where('is_alumni', true)
             ->orderBy('siswa_nama')->get()
-            ->unique(fn ($a) => $a->siswa_nis ?? $a->siswa_id)
+            ->unique(fn ($a) => $a->siswa_nisn ?? $a->siswa_id)
             ->values()
             ->map(fn ($a) => [
-                'nis' => $a->siswa_nis ?? $a->siswa?->nis ?? '-',
+                'nisn' => $a->siswa_nisn ?? $a->siswa?->nisn ?? '-',
                 'nama' => $a->siswa_nama ?? $a->siswa?->nama ?? '-',
                 'foto_url' => $a->siswa_foto_url ?? $a->siswa?->foto_url,
                 'kelas' => $a->kelas?->full_nama_kelas ?? $kelas->full_nama_kelas,

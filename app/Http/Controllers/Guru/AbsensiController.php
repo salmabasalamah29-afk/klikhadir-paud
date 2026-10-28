@@ -49,14 +49,13 @@ class AbsensiController extends Controller
 
                 return [
                     'id' => $siswa->id,
-                    'nis' => $siswa->nis,
+                    'nisn' => $siswa->nisn,
                     'nama' => $siswa->nama,
                     'foto_url' => $siswa->foto_url,
                     'absensi' => $absensi ? [
                         'id' => $absensi->id,
                         'status' => $absensi->status,
                         'keterangan' => $absensi->keterangan,
-                        'bukti' => $absensi->bukti,
                     ] : null,
                 ];
             })->values()->all();

@@ -29,14 +29,13 @@ class SiswaController extends Controller
 
                 $query->where(function ($q) use ($searchTrim) {
                     $q->whereLike('nama', "%{$searchTrim}%")
-                        ->orWhereLike('nis', "%{$searchTrim}%")
                         ->orWhereLike('nisn', "%{$searchTrim}%")
                         ->orWhereHas('kelas', function ($kq) use ($searchTrim) {
                             $kq->whereLike('nama_kelas', "%{$searchTrim}%");
                         });
                 });
             })
-            ->orderBy('nis', 'desc')
+            ->orderBy('nisn', 'desc')
             ->paginate(10)
             ->withQueryString();
 
@@ -62,7 +61,7 @@ class SiswaController extends Controller
         $this->normalizeFotoInput($request);
 
         $validated = $request->validate([
-            'nisn' => ['required', 'string', 'max:20', 'unique:siswas,nisn', 'unique:siswas,nis', 'unique:users,username'],
+            'nisn' => ['required', 'string', 'max:20', 'unique:siswas,nisn', 'unique:users,username'],
             'nik' => 'nullable|string|max:20',
             'nama' => 'required|string|max:255',
             'nama_panggilan' => 'nullable|string|max:100',
@@ -103,7 +102,6 @@ class SiswaController extends Controller
         $siswa = Siswa::create([
             'user_id' => $user->id,
             'kelas_id' => $validated['kelas_id'],
-            'nis' => $validated['nisn'],
             'nisn' => $validated['nisn'],
             'nik' => $validated['nik'] ?? null,
             'nama' => $validated['nama'],
@@ -145,7 +143,6 @@ class SiswaController extends Controller
                 'string',
                 'max:20',
                 Rule::unique('siswas', 'nisn')->ignore($siswa->id),
-                Rule::unique('siswas', 'nis')->ignore($siswa->id),
                 Rule::unique('users', 'username')->ignore($siswa->user_id),
             ],
             'nik' => 'nullable|string|max:20',
@@ -180,7 +177,6 @@ class SiswaController extends Controller
         ]);
 
         $siswa->update([
-            'nis' => $validated['nisn'],
             'nisn' => $validated['nisn'],
             'nik' => $validated['nik'] ?? null,
             'nama' => $validated['nama'],

@@ -54,7 +54,7 @@ class FortifyServiceProvider extends ServiceProvider
 
             $user = User::whereRaw('LOWER(email) = ?', [$login])
                 ->orWhereRaw('LOWER(username) = ?', [$login])
-                ->orWhereHas('siswa', fn ($q) => $q->where('nis', $rawLogin)->orWhereRaw('LOWER(nis) = ?', [$login]))
+                ->orWhereHas('siswa', fn ($q) => $q->where('nisn', $rawLogin)->orWhereRaw('LOWER(nisn) = ?', [$login]))
                 ->first();
 
             $isPasswordValid = $user ? Hash::check($request->password, $user->password) : false;

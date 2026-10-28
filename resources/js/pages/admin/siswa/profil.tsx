@@ -10,7 +10,6 @@ import adminSiswa from '@/routes/admin/siswa';
 
 interface Siswa {
     id: number;
-    nis: string;
     nisn: string;
     nik?: string | null;
     nama: string;

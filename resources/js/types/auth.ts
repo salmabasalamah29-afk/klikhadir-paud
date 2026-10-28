@@ -15,7 +15,7 @@ export type User = {
     } | null;
     siswa?: {
         nama: string;
-        nis?: string;
+        nisn?: string;
         jenis_kelamin?: 'laki-laki' | 'perempuan' | null;
         foto_url?: string | null;
         kelas?: {

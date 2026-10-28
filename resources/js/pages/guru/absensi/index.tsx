@@ -26,7 +26,7 @@ interface Kelas {
 
 interface Siswa {
     id: number;
-    nis: string;
+    nisn: string;
     nama: string;
     foto_url?: string | null;
     absensi: {
@@ -130,8 +130,11 @@ export default function GuruAbsensiIndex({
     const handleDirectReset = (siswa: Siswa) => {
         if (!siswa.absensi) return;
 
+        const previousAbsensi = siswa.absensi;
+        const previousKeterangan = keterangans[siswa.id];
+
         setSavingIds((prev) => new Set(prev).add(siswa.id));
-        setLocalSiswas((prev) => prev.map((s) => (s.absensi?.id === siswa.id ? { ...s, absensi: null } : s)));
+        setLocalSiswas((prev) => prev.map((s) => (s.id === siswa.id ? { ...s, absensi: null } : s)));
         setKeterangans((prev) => {
             const next = { ...prev };
             delete next[siswa.id];
@@ -143,10 +146,17 @@ export default function GuruAbsensiIndex({
             async: true,
             onSuccess: () => {
                 toast.success('Status kehadiran berhasil direset.');
-                setHasDirty(true);
             },
             onError: () => {
-                (router.reload as unknown as (opts: Record<string, unknown>) => void)({ only: ['siswas'], preserveScroll: true });
+                setLocalSiswas((prev) => prev.map((s) => (s.id === siswa.id ? { ...s, absensi: previousAbsensi } : s)));
+                setKeterangans((prev) => {
+                    const next = { ...prev };
+                    if (previousKeterangan !== undefined) {
+                        next[siswa.id] = previousKeterangan;
+                    }
+                    return next;
+                });
+                toast.error('Gagal mereset status kehadiran.');
             },
             onFinish: () => {
                 setSavingIds((prev) => {
@@ -294,7 +304,7 @@ export default function GuruAbsensiIndex({
                                         <thead className="bg-muted/50 text-xs font-medium text-muted-foreground uppercase tracking-wider">
                                             <tr>
                                                 <th className="px-3 py-3 w-12 text-center">No</th>
-                                                <th className="px-2 py-3 w-[72px] text-center whitespace-nowrap">NIS</th>
+                                                <th className="px-2 py-3 w-[72px] text-center whitespace-nowrap">NISN</th>
                                                 <th className="px-6 py-4 min-w-[180px]">Nama Siswa</th>
                                                 <th className="px-6 py-4 min-w-[200px]">Status Kehadiran</th>
                                                 {showKeterangan && <th className="px-6 py-4 min-w-[200px]">Keterangan</th>}
@@ -323,7 +333,7 @@ export default function GuruAbsensiIndex({
                                                             {index + 1}
                                                         </td>
                                                         <td className="px-2 py-3 font-mono text-[11px] font-medium whitespace-nowrap tracking-tight text-center">
-                                                            {siswa.nis}
+                                                            {siswa.nisn}
                                                         </td>
                                                         <td className="px-6 py-4 font-medium text-foreground">
                                                             <div className="flex items-center gap-3">

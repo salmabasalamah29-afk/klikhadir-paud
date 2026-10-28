@@ -1,16 +1,6 @@
 import { Head } from '@inertiajs/react';
-import {
-    CheckCircle,
-    XCircle,
-    X,
-    Clock,
-    FileWarning,
-    Calendar,
-    Award,
-    ImageUp,
-} from 'lucide-react';
-import { useState } from 'react';
-import { useAutoRefresh } from '@/hooks/use-auto-refresh';
+import { Calendar } from 'lucide-react';
+import { formatTanggalLengkap } from '@/components/date-input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -20,13 +10,6 @@ import {
     CardTitle,
 } from '@/components/ui/card';
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
-import {
     Table,
     TableBody,
     TableCell,
@@ -34,14 +17,14 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { useAutoRefresh } from '@/hooks/use-auto-refresh';
 import { dashboard as siswaDashboard } from '@/routes/siswa';
 
 interface Absensi {
     id: number;
     tanggal: string;
-    status: 'hadir' | 'sakit' | 'izin' | 'alpha' | 'dispensasi';
+    status: 'hadir' | 'sakit' | 'izin';
     keterangan: string | null;
-    bukti: string | null;
     jam_ke: string | null;
     waktu_mulai: string | null;
     waktu_selesai: string | null;
@@ -50,7 +33,6 @@ interface Absensi {
 interface Props {
     siswa: {
         id: number;
-        nis: string;
         nisn: string;
         nama: string;
         foto_url?: string | null;
@@ -63,38 +45,14 @@ interface Props {
         hadir: number;
         sakit: number;
         izin: number;
-        alpha: number;
-        dispensasi: number;
     };
     history: Absensi[];
     activeYear?: { tahun_awal: string; tahun_akhir: string; start: string; end: string } | null;
 }
 
 export default function SiswaDashboard({ siswa, stats, history, activeYear = null }: Props) {
-    const [previewBukti, setPreviewBukti] = useState<{ url: string; status?: string; tanggal?: string } | null>(null);
     useAutoRefresh(true, 6000, ['stats', 'history']);
     const hasKeterangan = history.some((r) => r.keterangan != null && r.keterangan.toString().trim() !== '');
-    const hasSurat = history.some((r) => r.bukti != null && r.bukti.toString().trim() !== '');
-    const formatTanggalLengkap = (iso: string) => {
-        try {
-            const d = new Date(iso.replace(' ', 'T'));
-            if (isNaN(d.getTime())) return iso;
-            return d.toLocaleDateString('id-ID', {
-                weekday: 'long',
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric',
-                timeZone: 'Asia/Jakarta',
-            });
-        } catch { return iso; }
-    };
-    const getSuratLabel = (status: string, tanggal?: string) => {
-        const jenis = status ? status.charAt(0).toUpperCase() + status.slice(1) : 'Surat';
-        const nm = siswa.nama ? siswa.nama.toUpperCase().replace(/\s+/g, ' ').trim() : 'SISWA';
-        const kls = siswa.kelas.full_nama_kelas ?? siswa.kelas.nama_kelas ?? '-';
-        const tgl = tanggal ?? '-';
-        return `${jenis}-${nm}-${kls}-${tgl}`;
-    };
     const getStatusBadge = (status: string) => {
         switch (status) {
             case 'hadir':
@@ -113,14 +71,6 @@ export default function SiswaDashboard({ siswa, stats, history, activeYear = nul
                 return (
                     <Badge className="bg-orange-500 hover:bg-orange-600">
                         Izin
-                    </Badge>
-                );
-            case 'alpha':
-                return <Badge variant="destructive">Alpha</Badge>;
-            case 'dispensasi':
-                return (
-                    <Badge className="bg-indigo-500 hover:bg-indigo-600">
-                        Dispensasi
                     </Badge>
                 );
             default:
@@ -171,7 +121,7 @@ export default function SiswaDashboard({ siswa, stats, history, activeYear = nul
                 </div>
 
                 {activeYear && (
-                    <p className="text-xs text-muted-foreground">Riwayat menampilkan tahun ajaran aktif {activeYear.tahun_awal}/{activeYear.tahun_akhir} ({activeYear.start} s/d {activeYear.end}). Data tahun sebelumnya tersedia di Arsip admin.</p>
+                    <p className="text-xs text-muted-foreground">Riwayat menampilkan tahun ajaran aktif {activeYear.tahun_awal}/{activeYear.tahun_akhir} ({formatTanggalLengkap(activeYear.start)} s/d {formatTanggalLengkap(activeYear.end)}). Data tahun sebelumnya tersedia di Arsip admin.</p>
                 )}
 
                 <Card>
@@ -186,14 +136,13 @@ export default function SiswaDashboard({ siswa, stats, history, activeYear = nul
                                         <TableHead className="w-[240px]">Tanggal</TableHead>
                                         <TableHead className="w-[120px]">Status</TableHead>
                                         {hasKeterangan && <TableHead>Keterangan</TableHead>}
-                                        {hasSurat && <TableHead className="w-[80px]">Surat</TableHead>}
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {history.length === 0 ? (
                                         <TableRow>
                                             <TableCell
-                                                colSpan={2 + (hasKeterangan ? 1 : 0) + (hasSurat ? 1 : 0)}
+                                                colSpan={2 + (hasKeterangan ? 1 : 0)}
                                                 className="h-24 text-center"
                                             >
                                                 Belum ada data riwayat presensi.
@@ -212,22 +161,6 @@ export default function SiswaDashboard({ siswa, stats, history, activeYear = nul
                                                     {getStatusBadge(record.status)}
                                                 </TableCell>
                                                 {hasKeterangan && <TableCell className="text-muted-foreground max-w-[200px] truncate">{record.keterangan || '-'}</TableCell>}
-                                                {hasSurat && (
-                                                    <TableCell>
-                                                        {record.bukti ? (
-                                                            <button
-                                                                onClick={() => setPreviewBukti({ url: `/storage/${record.bukti}`, status: record.status, tanggal: record.tanggal })}
-                                                                className="group relative h-8 w-8 shrink-0 overflow-hidden rounded-md border bg-muted/20 shadow-sm hover:ring-2 hover:ring-primary/20 transition-all"
-                                                                title="Lihat surat"
-                                                            >
-                                                                <img src={`/storage/${record.bukti}`} alt={`Bukti ${record.status}`} className="h-full w-full object-cover" loading="lazy" decoding="async" onError={(e)=>{(e.currentTarget as HTMLImageElement).style.display='none'}} />
-                                                                <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/10"><ImageUp className="h-2.5 w-2.5 text-white opacity-0 group-hover:opacity-100" /></span>
-                                                            </button>
-                                                        ) : (
-                                                            <span className="text-xs text-muted-foreground">-</span>
-                                                        )}
-                                                    </TableCell>
-                                                )}
                                             </TableRow>
                                         ))
                                     )}
@@ -237,25 +170,6 @@ export default function SiswaDashboard({ siswa, stats, history, activeYear = nul
                     </CardContent>
                 </Card>
             </div>
-
-            <Dialog open={previewBukti !== null} onOpenChange={(open) => { if (!open) setPreviewBukti(null); }}>
-                <DialogContent className="sm:max-w-[400px] w-auto max-h-[85vh] bg-transparent border-none shadow-none p-1 sm:p-2 [&>button]:hidden">
-                    {previewBukti && (
-                        <div className="bg-card rounded-xl px-4 py-4 shadow-2xl flex flex-col gap-4 relative w-auto max-w-[400px] mx-auto">
-                            <button onClick={() => setPreviewBukti(null)} className="absolute left-4 top-4 h-8 w-8 rounded-full bg-muted hover:bg-accent flex items-center justify-center" aria-label="Tutup">
-                                <X className="h-4 w-4" />
-                            </button>
-                            <div className="text-center">
-                                <h3 className="text-base font-semibold">Surat {previewBukti.status ? previewBukti.status.charAt(0).toUpperCase()+previewBukti.status.slice(1) : 'Presensi'}</h3>
-                                <p className="text-xs text-muted-foreground mt-0.5 font-mono break-all">{getSuratLabel(previewBukti.status ?? 'surat', previewBukti.tanggal ? formatTanggalLengkap(previewBukti.tanggal) : '-')}.</p>
-                            </div>
-                            <div className="flex justify-center">
-                                <img src={previewBukti.url} alt={`Surat ${previewBukti.status}`} className="max-w-full max-h-[50vh] rounded-lg object-contain" loading="eager" decoding="async" onError={(e)=>{(e.currentTarget as HTMLImageElement).style.display='none'}} />
-                            </div>
-                        </div>
-                    )}
-                </DialogContent>
-            </Dialog>
         </>
     );
 }

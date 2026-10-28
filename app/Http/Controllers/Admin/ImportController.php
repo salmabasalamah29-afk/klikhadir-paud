@@ -286,7 +286,7 @@ class ImportController extends Controller
         $row['nik'] = $this->normalizeNik($row['nik'] ?? null);
 
         Validator::make($row, [
-            'nisn' => ['required', 'string', 'max:20', 'unique:siswas,nisn', 'unique:siswas,nis', 'unique:users,username'],
+            'nisn' => ['required', 'string', 'max:20', 'unique:siswas,nisn', 'unique:users,username'],
             'nik' => 'nullable|string|max:20',
             'nama' => 'required|string|max:255',
             'nama_panggilan' => 'nullable|string|max:100',
@@ -337,7 +337,6 @@ class ImportController extends Controller
         Siswa::create([
             'user_id' => $user->id,
             'kelas_id' => $kelas->id,
-            'nis' => $row['nisn'],
             'nisn' => $row['nisn'],
             'nik' => $row['nik'] ?? null,
             'nama' => $row['nama'],

@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ArsipPresensi extends Model
 {
-    protected $fillable = ['tahun_ajaran_id', 'siswa_id', 'kelas_id', 'guru_id', 'mapel_id', 'tanggal', 'jam_ke', 'status', 'keterangan', 'bukti', 'is_alumni', 'siswa_nis', 'siswa_nama', 'siswa_foto_url'];
+    protected $fillable = ['tahun_ajaran_id', 'siswa_id', 'kelas_id', 'guru_id', 'mapel_id', 'tanggal', 'jam_ke', 'status', 'keterangan', 'is_alumni', 'siswa_nisn', 'siswa_nama', 'siswa_foto_url'];
 
     protected $casts = ['tanggal' => 'date', 'is_alumni' => 'boolean'];
 

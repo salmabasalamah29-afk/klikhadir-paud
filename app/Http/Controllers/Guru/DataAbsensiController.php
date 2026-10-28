@@ -35,7 +35,7 @@ class DataAbsensiController extends Controller
         $kelasList = Kelas::orderBy('id')->get();
 
         $absensis = [];
-        $stats = ['hadir' => 0, 'sakit' => 0, 'izin' => 0, 'alpha' => 0, 'dispensasi' => 0];
+        $stats = ['hadir' => 0, 'sakit' => 0, 'izin' => 0];
         $schedules = collect();
         $jamAktif = null;
         $guruAktif = null;
@@ -51,12 +51,12 @@ class DataAbsensiController extends Controller
                 ->orderBy('id', 'desc');
 
             if ($berhalanganHadir) {
-                $query->whereIn('status', ['sakit', 'izin', 'alpha', 'dispensasi']);
+                $query->whereIn('status', ['sakit', 'izin']);
             }
 
             $raw = $query->get();
 
-            // Gabungkan per siswa: status Sakit/Izin/Dispensasi/Alpha berlaku seharian
+            // Gabungkan per siswa: status Sakit/Izin berlaku seharian
             $grouped = $raw->groupBy('siswa_id');
             $latestPerSiswa = $grouped->map(function ($group) {
                 $sorted = $group->sort(function ($a, $b) {
@@ -70,38 +70,16 @@ class DataAbsensiController extends Controller
                 })->values();
 
                 $berhalangan = $sorted->first(function ($item) {
-                    return in_array($item->status, ['sakit', 'izin', 'dispensasi', 'alpha'], true);
+                    return in_array($item->status, ['sakit', 'izin'], true);
                 });
-                $primary = $berhalangan ?? $sorted->first();
-                if (! $primary) {
-                    return null;
-                }
 
-                if (empty($primary->bukti)) {
-                    $latestBukti = $sorted->first(function ($item) {
-                        return ! empty($item->bukti);
-                    });
-                    if ($latestBukti) {
-                        $primary->setAttribute('bukti', $latestBukti->bukti);
-                    }
-                }
-
-                if ($primary->status === 'alpha' && empty(trim((string) $primary->keterangan))) {
-                    $withKet = $sorted->first(function ($item) {
-                        return $item->status === 'alpha' && ! empty(trim((string) $item->keterangan));
-                    });
-                    if ($withKet) {
-                        $primary->setAttribute('keterangan', $withKet->keterangan);
-                    }
-                }
-
-                return $primary;
+                return $berhalangan ?? $sorted->first();
             })->filter()->values();
 
             $latestPerSiswa = $latestPerSiswa->sortBy(function ($a) {
-                $nis = trim((string) ($a->siswa?->nis ?? ''));
-                if ($nis !== '') {
-                    return $nis;
+                $nisn = trim((string) ($a->siswa?->nisn ?? ''));
+                if ($nisn !== '') {
+                    return $nisn;
                 }
 
                 return sprintf('%08d', $a->siswa_id);
@@ -137,12 +115,11 @@ class DataAbsensiController extends Controller
                     'waktu_selesai' => $absensi->waktu_selesai,
                     'status' => $absensi->status,
                     'keterangan' => $absensi->keterangan,
-                    'bukti' => $absensi->bukti,
                     'updated_at' => $absensi->updated_at ? $absensi->updated_at->timezone('Asia/Jakarta')->format('Y-m-d H:i:s') : null,
                     'created_at' => $absensi->created_at ? $absensi->created_at->timezone('Asia/Jakarta')->format('Y-m-d H:i:s') : null,
                     'siswa' => $siswa ? [
                         'id' => $siswa->id,
-                        'nis' => $siswa->nis,
+                        'nisn' => $siswa->nisn,
                         'nama' => $siswa->nama,
                         'foto_url' => $siswa->foto_url,
                     ] : null,

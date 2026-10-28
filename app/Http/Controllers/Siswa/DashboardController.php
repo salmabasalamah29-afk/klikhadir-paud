@@ -20,8 +20,6 @@ class DashboardController extends Controller
             'hadir' => $siswa->absensis()->where('status', 'hadir')->count(),
             'sakit' => $siswa->absensis()->where('status', 'sakit')->count(),
             'izin' => $siswa->absensis()->where('status', 'izin')->count(),
-            'alpha' => $siswa->absensis()->where('status', 'alpha')->count(),
-            'dispensasi' => $siswa->absensis()->where('status', 'dispensasi')->count(),
         ];
 
         $rawHistory = $siswa->absensis()->orderBy('updated_at', 'desc')->orderBy('id', 'desc')->get();
@@ -36,22 +34,9 @@ class DashboardController extends Controller
 
                 return $tb <=> $ta;
             })->values();
-            $berhalangan = $sorted->first(fn ($it) => in_array($it->status, ['sakit', 'izin', 'dispensasi', 'alpha'], true));
-            $primary = $berhalangan ?? $sorted->first();
-            if ($primary && empty($primary->bukti)) {
-                $latestBukti = $sorted->first(fn ($it) => ! empty($it->bukti));
-                if ($latestBukti) {
-                    $primary->setAttribute('bukti', $latestBukti->bukti);
-                }
-            }
-            if ($primary && $primary->status === 'alpha' && empty(trim((string) $primary->keterangan))) {
-                $withKet = $sorted->first(fn ($it) => $it->status === 'alpha' && ! empty(trim((string) $it->keterangan)));
-                if ($withKet) {
-                    $primary->setAttribute('keterangan', $withKet->keterangan);
-                }
-            }
+            $berhalangan = $sorted->first(fn ($it) => in_array($it->status, ['sakit', 'izin'], true));
 
-            return $primary;
+            return $berhalangan ?? $sorted->first();
         })->filter()->sortByDesc('tanggal')->values()->all();
 
         $siswa->load(['kelas', 'foto']);

@@ -94,7 +94,7 @@ test('siswa can authenticate and redirect to siswa dashboard', function () {
         'user_id' => $user->id,
         'kelas_id' => $kelas->id,
         'nama' => 'Siswa Test',
-        'nis' => '87654321',
+        'nisn' => '87654321',
     ]);
 
     $response = $this->post(route('login.store'), [
@@ -120,7 +120,7 @@ test('login ignores stale intended url and follows role target', function () {
         'user_id' => $user->id,
         'kelas_id' => $kelas->id,
         'nama' => 'Siswa Test',
-        'nis' => '87654321',
+        'nisn' => '87654321',
     ]);
 
     session()->put('url.intended', route('guru.absensi.index'));
@@ -174,7 +174,7 @@ test('role sync migration repairs users role from guru and siswa records', funct
         'user_id' => $siswa->id,
         'kelas_id' => $kelas->id,
         'nama' => 'Siswa Salah Role',
-        'nis' => '87654321',
+        'nisn' => '87654321',
     ]);
 
     $migration = require database_path('migrations/2026_09_02_024405_sync_users_role_from_guru_siswa.php');

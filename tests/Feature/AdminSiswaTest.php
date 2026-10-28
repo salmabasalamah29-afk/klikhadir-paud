@@ -24,7 +24,7 @@ test('admin can view siswa list', function () {
     Siswa::create([
         'user_id' => User::factory()->create(['role' => 'siswa', 'username' => '24.012505'])->id,
         'kelas_id' => $this->kelas->id,
-        'nis' => '24.012505',
+        'nisn' => '24.012505',
         'nama' => 'Velove Azalia Putri',
     ]);
 
@@ -35,7 +35,6 @@ test('admin can search siswa by nisn', function () {
     Siswa::create([
         'user_id' => User::factory()->create(['role' => 'siswa', 'username' => '24.012505'])->id,
         'kelas_id' => $this->kelas->id,
-        'nis' => '24.012505',
         'nisn' => '0012345678',
         'nama' => 'Velove Azalia Putri',
     ]);
@@ -43,7 +42,6 @@ test('admin can search siswa by nisn', function () {
     Siswa::create([
         'user_id' => User::factory()->create(['role' => 'siswa', 'username' => '24.012506'])->id,
         'kelas_id' => $this->kelas->id,
-        'nis' => '24.012506',
         'nisn' => '0099999999',
         'nama' => 'Siswa Lain',
     ]);
@@ -67,7 +65,6 @@ test('admin can create siswa with NISN', function () {
     $response->assertRedirect();
 
     $this->assertDatabaseHas('siswas', [
-        'nis' => '0012345678',
         'nisn' => '0012345678',
         'nama' => 'Velove Azalia Putri',
         'jenis_kelamin' => 'perempuan',
@@ -92,7 +89,7 @@ test('admin can update siswa with NISN', function () {
     $siswa = Siswa::create([
         'user_id' => User::factory()->create(['role' => 'siswa', 'username' => '24.012505'])->id,
         'kelas_id' => $this->kelas->id,
-        'nis' => '24.012505',
+        'nisn' => '24.012505',
         'nama' => 'Velove Azalia Putri',
     ]);
 
@@ -107,7 +104,6 @@ test('admin can update siswa with NISN', function () {
 
     $this->assertDatabaseHas('siswas', [
         'id' => $siswa->id,
-        'nis' => '0012345678',
         'nisn' => '0012345678',
         'jenis_kelamin' => 'perempuan',
     ]);
@@ -166,7 +162,7 @@ test('admin can update siswa with existing foto sent as URL string', function ()
     $siswa = Siswa::create([
         'user_id' => User::factory()->create(['role' => 'siswa', 'username' => '24.012505'])->id,
         'kelas_id' => $this->kelas->id,
-        'nis' => '24.012505',
+        'nisn' => '24.012505',
         'nama' => 'Velove Azalia Putri',
     ]);
 
@@ -201,7 +197,7 @@ test('admin can view siswa profile', function () {
     $siswa = Siswa::create([
         'user_id' => User::factory()->create(['role' => 'siswa', 'username' => '24.012505'])->id,
         'kelas_id' => $this->kelas->id,
-        'nis' => '24.012505',
+        'nisn' => '24.012505',
         'nama' => 'Velove Azalia Putri',
     ]);
 
@@ -209,6 +205,6 @@ test('admin can view siswa profile', function () {
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('admin/siswa/profil')
-            ->where('siswa.nis', '24.012505')
+            ->where('siswa.nisn', '24.012505')
             ->has('siswa.foto_url'));
 });

@@ -13,6 +13,15 @@ use Inertia\Inertia;
 
 class ArsipController extends Controller
 {
+    private function formatTanggalIndonesia(?string $date): string
+    {
+        if (! $date) {
+            return '-';
+        }
+
+        return Carbon::parse($date)->locale('id')->translatedFormat('l, j F Y');
+    }
+
     public function tingkat(Request $request, TahunAjaran $tahunAjaran)
     {
         $hasAnyArsip = ArsipPresensi::where('tahun_ajaran_id', $tahunAjaran->id)->exists();
@@ -39,8 +48,8 @@ class ArsipController extends Controller
             ->orderBy('updated_at', 'desc')
             ->get();
 
-        // Samakan persis merging guru/DataAbsensi: berhalangan seharian prioritas + preserve bukti/keterangan
-        $groupedRaw = $arsip->groupBy(fn ($a) => ($a->siswa_id ?? $a->siswa_nis ?? $a->id).'|'.$a->tanggal->format('Y-m-d'));
+        // Samakan persis merging guru/DataAbsensi: berhalangan seharian prioritas + preserve keterangan
+        $groupedRaw = $arsip->groupBy(fn ($a) => ($a->siswa_id ?? $a->siswa_nisn ?? $a->id).'|'.$a->tanggal->format('Y-m-d'));
         $merged = $groupedRaw->map(function ($group) {
             $sorted = $group->sort(function ($a, $b) {
                 $ta = $a->updated_at ? $a->updated_at->getTimestamp() : 0;
@@ -51,38 +60,22 @@ class ArsipController extends Controller
 
                 return $tb <=> $ta;
             })->values();
-            $berhalangan = $sorted->first(fn ($it) => in_array($it->status, ['sakit', 'izin', 'dispensasi', 'alpha'], true));
-            $primary = $berhalangan ?? $sorted->first();
-            if (! $primary) {
-                return null;
-            }
-            if (empty($primary->bukti)) {
-                $latestBukti = $sorted->first(fn ($it) => ! empty($it->bukti));
-                if ($latestBukti) {
-                    $primary->setAttribute('bukti', $latestBukti->bukti);
-                }
-            }
-            if ($primary->status === 'alpha' && empty(trim((string) $primary->keterangan))) {
-                $withKet = $sorted->first(fn ($it) => $it->status === 'alpha' && ! empty(trim((string) $it->keterangan)));
-                if ($withKet) {
-                    $primary->setAttribute('keterangan', $withKet->keterangan);
-                }
-            }
+            $berhalangan = $sorted->first(fn ($it) => in_array($it->status, ['sakit', 'izin'], true));
 
-            return $primary;
+            return $berhalangan ?? $sorted->first();
         })->filter()->values();
 
-        // Urut natural NIS seperti guru/DataAbsensi, lalu tanggal asc
+        // Urut natural NISN seperti guru/DataAbsensi, lalu tanggal asc
         $grouped = $merged->sortBy(function ($a) {
-            $nis = trim((string) ($a->siswa_nis ?? $a->siswa?->nis ?? ''));
-            if ($nis !== '') {
-                return $a->tanggal->format('Y-m-d').'|'.$nis;
+            $nisn = trim((string) ($a->siswa_nisn ?? $a->siswa?->nisn ?? ''));
+            if ($nisn !== '') {
+                return $a->tanggal->format('Y-m-d').'|'.$nisn;
             }
 
             return $a->tanggal->format('Y-m-d').'|'.sprintf('%08d', $a->siswa_id ?? $a->id);
         }, SORT_NATURAL)->values();
 
-        $stats = ['hadir' => 0, 'sakit' => 0, 'izin' => 0, 'alpha' => 0, 'dispensasi' => 0];
+        $stats = ['hadir' => 0, 'sakit' => 0, 'izin' => 0];
         foreach ($grouped as $r) {
             if (isset($stats[$r->status])) {
                 $stats[$r->status]++;
@@ -94,7 +87,7 @@ class ArsipController extends Controller
             'kelas' => $kelas,
             'records' => $grouped->map(fn ($a) => [
                 'id' => $a->id,
-                'nis' => $a->siswa_nis ?? $a->siswa?->nis,
+                'nisn' => $a->siswa_nisn ?? $a->siswa?->nisn,
                 'nama' => $a->siswa_nama ?? $a->siswa?->nama,
                 'foto_url' => $a->siswa_foto_url ?? $a->siswa?->foto_url,
                 'kelas' => $a->kelas?->full_nama_kelas,
@@ -105,7 +98,6 @@ class ArsipController extends Controller
                 'jam_ke' => $a->jam_ke,
                 'guru' => $a->guru?->nama ?? '-',
                 'keterangan' => $a->keterangan,
-                'bukti' => $a->bukti,
             ])->values(),
             'stats' => $stats,
         ]);
@@ -120,8 +112,8 @@ class ArsipController extends Controller
             ->orderBy('updated_at', 'desc')
             ->get();
 
-        // Samakan merging dengan detail/DataAbsensi (berhalangan prioritas + preserve bukti/keterangan)
-        $groupedRaw = $raw->groupBy(fn ($a) => ($a->siswa_id ?? $a->siswa_nis ?? $a->id).'|'.$a->tanggal->format('Y-m-d'));
+        // Samakan merging dengan detail/DataAbsensi (berhalangan prioritas + preserve keterangan)
+        $groupedRaw = $raw->groupBy(fn ($a) => ($a->siswa_id ?? $a->siswa_nisn ?? $a->id).'|'.$a->tanggal->format('Y-m-d'));
         $merged = $groupedRaw->map(function ($group) {
             $sorted = $group->sort(function ($a, $b) {
                 $ta = $a->updated_at ? $a->updated_at->getTimestamp() : 0;
@@ -132,31 +124,15 @@ class ArsipController extends Controller
 
                 return $tb <=> $ta;
             })->values();
-            $berhalangan = $sorted->first(fn ($it) => in_array($it->status, ['sakit', 'izin', 'dispensasi', 'alpha'], true));
-            $primary = $berhalangan ?? $sorted->first();
-            if (! $primary) {
-                return null;
-            }
-            if (empty($primary->bukti)) {
-                $latestBukti = $sorted->first(fn ($it) => ! empty($it->bukti));
-                if ($latestBukti) {
-                    $primary->setAttribute('bukti', $latestBukti->bukti);
-                }
-            }
-            if ($primary->status === 'alpha' && empty(trim((string) $primary->keterangan))) {
-                $withKet = $sorted->first(fn ($it) => $it->status === 'alpha' && ! empty(trim((string) $it->keterangan)));
-                if ($withKet) {
-                    $primary->setAttribute('keterangan', $withKet->keterangan);
-                }
-            }
+            $berhalangan = $sorted->first(fn ($it) => in_array($it->status, ['sakit', 'izin'], true));
 
-            return $primary;
+            return $berhalangan ?? $sorted->first();
         })->filter()->values();
 
         $arsip = $merged->sortBy(function ($a) {
-            $nis = trim((string) ($a->siswa_nis ?? $a->siswa?->nis ?? ''));
-            if ($nis !== '') {
-                return $a->tanggal->format('Y-m-d').'|'.$nis;
+            $nisn = trim((string) ($a->siswa_nisn ?? $a->siswa?->nisn ?? ''));
+            if ($nisn !== '') {
+                return $a->tanggal->format('Y-m-d').'|'.$nisn;
             }
 
             return $a->tanggal->format('Y-m-d').'|'.sprintf('%08d', $a->siswa_id ?? $a->id);
@@ -164,7 +140,7 @@ class ArsipController extends Controller
 
         $fullKelas = $kelas->full_nama_kelas ?? $kelas->nama_kelas;
 
-        // Samakan persis format generateLihatAbsensiExcel (guru) — 1 tabel per hari, No·NIS·Nama·Kelas·Tanggal·Status·Keterangan
+        // Format standar ekspor presensi siswa: 1 tabel per hari, NO·NISN·NAMA SISWA·HARI & TANGGAL·STATUS·KETERANGAN
         $html = "\xEF\xBB\xBF";
         $html .= '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
         $html .= '<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><meta charset="UTF-8">';
@@ -180,7 +156,7 @@ class ArsipController extends Controller
 
         if ($arsip->isEmpty()) {
             $html .= '<table border="1" cellspacing="0" cellpadding="10" style="border-collapse:collapse;width:100%;border:1px solid #000;">';
-            $html .= '<thead><tr><th style="width:38px">No</th><th style="width:58px">NIS</th><th style="min-width:260px">Nama</th><th style="width:125px">Kelas</th><th style="width:95px">Tanggal</th><th style="width:105px">Status</th></tr></thead><tbody>';
+            $html .= '<thead><tr><th style="width:38px">NO</th><th style="width:58px">NISN</th><th style="min-width:260px">NAMA SISWA</th><th style="width:190px">HARI &amp; TANGGAL</th><th style="width:105px">STATUS</th><th style="min-width:180px">KETERANGAN</th></tr></thead><tbody>';
             $html .= '<tr><td colspan="6" style="text-align:center;padding:24px;">Tidak ada data untuk filter ini.</td></tr>';
             $html .= '</tbody></table></body></html>';
             $filename = 'arsip-rekap-presensi-'.Str::slug($fullKelas).'-'.$tahunAjaran->tahun_awal.$tahunAjaran->tahun_akhir.'.xls';
@@ -188,45 +164,31 @@ class ArsipController extends Controller
             return $this->safeExcelResponse($html, $filename);
         }
 
-        // Cek global Keterangan seperti generateLihatAbsensiExcel — hanya tabel pertama yang tampilkan kolom Keterangan jika ada
-        // Cek apakah ada record dengan keterangan valid (termasuk alpha / status lain dengan keterangan)
-        $hasKeteranganGlobal = $arsip->contains(fn ($a) => $a->keterangan !== null && trim((string) $a->keterangan) !== '' && trim((string) $a->keterangan) !== '-');
         $grouped = $arsip->groupBy(fn ($a) => $a->tanggal->format('Y-m-d'))->sortKeys();
-        $isFirstTable = true;
+        $colCount = 6;
 
         foreach ($grouped as $tanggal => $dateGroup) {
-            $formattedPeriode = Carbon::parse($tanggal)->format('d-m-Y');
-            $hari = Carbon::parse($tanggal)->locale('id')->isoFormat('dddd');
-            $sortedDateGroup = $dateGroup->sortBy(fn ($a) => trim((string) ($a->siswa_nis ?? $a->siswa?->nis ?? sprintf('%08d', $a->siswa_id ?? $a->id))), SORT_NATURAL)->values();
-            $showKeteranganThisTable = $hasKeteranganGlobal;
-            $colCount = $showKeteranganThisTable ? 7 : 6;
+            $formattedPeriode = $this->formatTanggalIndonesia($tanggal);
+            $sortedDateGroup = $dateGroup->sortBy(fn ($a) => trim((string) ($a->siswa_nisn ?? $a->siswa?->nisn ?? sprintf('%08d', $a->siswa_id ?? $a->id))), SORT_NATURAL)->values();
             $html .= '<table border="1" cellspacing="0" cellpadding="10" style="border-collapse:collapse;width:100%;border:1px solid #000;">';
-            $html .= '<tr class="title-row"><td colspan="'.$colCount.'" style="font-size:12px">'.e($fullKelas).' &nbsp;&bull;&nbsp; '.e(ucfirst($hari).', '.$formattedPeriode).'</td></tr>';
-            $html .= '<thead><tr><th style="width:38px">No</th><th style="width:58px">NIS</th><th style="min-width:260px">Nama</th><th style="width:125px">Kelas</th><th style="width:95px">Tanggal</th><th style="width:105px">Status</th>';
-            if ($showKeteranganThisTable) {
-                $html .= '<th style="min-width:180px">Keterangan</th>';
-            }
-            $html .= '</tr></thead><tbody>';
+            $html .= '<tr class="title-row"><td colspan="'.$colCount.'" style="font-size:12px">'.e($fullKelas).' &nbsp;&bull;&nbsp; '.e($formattedPeriode).'</td></tr>';
+            $html .= '<thead><tr><th style="width:38px">NO</th><th style="width:58px">NISN</th><th style="min-width:260px">NAMA SISWA</th><th style="width:190px">HARI &amp; TANGGAL</th><th style="width:105px">STATUS</th><th style="min-width:180px">KETERANGAN</th></tr></thead><tbody>';
             $no = 1;
             foreach ($sortedDateGroup as $a) {
+                $ket = ($a->keterangan && trim((string) $a->keterangan) !== '') ? $a->keterangan : '-';
                 $html .= '<tr>';
                 $html .= '<td style="text-align:center;">'.$no++.'</td>';
-                $html .= '<td style="mso-number-format:\@;text-align:center;">'.e($a->siswa_nis ?? $a->siswa?->nis ?? '-').'</td>';
+                $html .= '<td style="mso-number-format:\@;text-align:center;">'.e($a->siswa_nisn ?? $a->siswa?->nisn ?? '-').'</td>';
                 $html .= '<td style="white-space:normal;word-wrap:break-word;min-width:260px">'.e($a->siswa_nama ?? $a->siswa?->nama ?? '-').'</td>';
-                $html .= '<td style="text-align:center;white-space:nowrap;">'.e($a->kelas?->full_nama_kelas ?? $fullKelas).'</td>';
                 $html .= '<td style="text-align:center;mso-number-format:\@;white-space:nowrap">'.e($formattedPeriode).'</td>';
                 $html .= '<td style="text-align:center;white-space:nowrap">'.e(ucfirst($a->status ?? '-')).'</td>';
-                if ($showKeteranganThisTable) {
-                    $ket = ($a->keterangan && trim((string) $a->keterangan) !== '') ? $a->keterangan : '-';
-                    $html .= '<td style="white-space:normal;word-wrap:break-word">'.e($ket).'</td>';
-                }
+                $html .= '<td style="white-space:normal;word-wrap:break-word">'.e($ket).'</td>';
                 $html .= '</tr>';
             }
             $html .= '<tr><td colspan="'.$colCount.'" style="font-weight:bold; text-align:left; border:1px solid #000; padding:10px 12px;background:#F8FAFF">Total: '.$sortedDateGroup->count().' siswa</td></tr>';
             $html .= '</tbody></table>';
             $html .= '<table style="border:none;width:100%"><tr><td style="border:none;height:35px;background:transparent">&nbsp;</td></tr></table>';
             $html .= '<div style="height:27px;line-height:27px;border:none;background:transparent;mso-height-source:userset">&nbsp;</div>';
-            $isFirstTable = false;
         }
 
         $html .= '</body></html>';

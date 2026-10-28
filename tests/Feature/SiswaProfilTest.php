@@ -17,7 +17,7 @@ function createSiswaProfile(array $extra = []): array
     $siswa = Siswa::create([
         'user_id' => $user->id,
         'kelas_id' => $kelas->id,
-        'nis' => '24.012505',
+        'nisn' => '24.012505',
         'nama' => 'Velove Azalia Putri',
         'jenis_kelamin' => 'perempuan',
     ]);
@@ -33,7 +33,7 @@ test('siswa can view his own profile page with kelas identity', function () {
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('siswa/profil')
-            ->where('profil.nis', '24.012505')
+            ->where('profil.nisn', '24.012505')
             ->where('profil.nama', 'Velove Azalia Putri')
             ->where('profil.jenis_kelamin', 'perempuan')
             ->where('profil.kelas.full_nama_kelas', 'Kelompok A')
@@ -47,7 +47,7 @@ test('shared auth user of siswa exposes profile data and kelas identity', functi
         ->get(route('siswa.profil'))
         ->assertInertia(fn (Assert $page) => $page
             ->where('auth.user.role', 'siswa')
-            ->where('auth.user.siswa.nis', '24.012505')
+            ->where('auth.user.siswa.nisn', '24.012505')
             ->where('auth.user.siswa.nama', 'Velove Azalia Putri')
             ->where('auth.user.siswa.kelas.full_nama_kelas', 'Kelompok A')
             ->has('auth.user.avatar'));

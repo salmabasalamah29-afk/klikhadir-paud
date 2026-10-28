@@ -103,7 +103,7 @@ test('admin can import siswa without nis column', function () {
     $siswa = Siswa::where('nisn', '240125010001')->firstOrFail();
 
     expect($siswa->nama)->toBe('Andi Wijaya');
-    expect($siswa->nis)->toBe('240125010001');
+    expect($siswa->nisn)->toBe('240125010001');
     expect($siswa->jenis_kelamin)->toBe('laki-laki');
     expect($siswa->user->username)->toBe('240125010001');
     expect($siswa->kelas->nama_kelas)->toBe('KB A');

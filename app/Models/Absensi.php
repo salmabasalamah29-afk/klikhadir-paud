@@ -14,7 +14,6 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'tanggal',
     'status',
     'keterangan',
-    'bukti',
     'jam_ke',
     'waktu_mulai',
     'waktu_selesai',

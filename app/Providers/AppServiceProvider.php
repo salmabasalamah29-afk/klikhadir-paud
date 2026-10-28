@@ -42,7 +42,7 @@ class AppServiceProvider extends ServiceProvider
             try {
                 if (DB::getDriverName() === 'pgsql') {
                     DB::statement('ALTER TABLE absensis DROP CONSTRAINT IF EXISTS absensis_status_check');
-                    DB::statement('ALTER TABLE arsip_presensis ADD COLUMN IF NOT EXISTS siswa_nis VARCHAR(20) NULL');
+                    DB::statement('ALTER TABLE arsip_presensis ADD COLUMN IF NOT EXISTS siswa_nisn VARCHAR(20) NULL');
                     DB::statement('ALTER TABLE arsip_presensis ADD COLUMN IF NOT EXISTS siswa_nama VARCHAR(255) NULL');
                     DB::statement('ALTER TABLE arsip_presensis ADD COLUMN IF NOT EXISTS siswa_foto_url VARCHAR(255) NULL');
                 }

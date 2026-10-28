@@ -16,13 +16,13 @@ beforeEach(function () {
     $this->kelasA = Kelas::create(['nama_kelas' => 'Kelompok A']);
 });
 
-function buatSiswaNaikKelas(int $kelasId, string $nis, bool $isAlumni = false): Siswa
+function buatSiswaNaikKelas(int $kelasId, string $nisn, bool $isAlumni = false): Siswa
 {
     return Siswa::create([
-        'user_id' => User::factory()->create(['role' => 'siswa', 'username' => $nis])->id,
+        'user_id' => User::factory()->create(['role' => 'siswa', 'username' => $nisn])->id,
         'kelas_id' => $kelasId,
-        'nis' => $nis,
-        'nama' => 'Siswa '.$nis,
+        'nisn' => $nisn,
+        'nama' => 'Siswa '.$nisn,
         'is_alumni' => $isAlumni,
     ]);
 }
@@ -58,8 +58,8 @@ test('naik kelas menandai seluruh siswa aktif sebagai alumni dan mengarsipkan pr
     expect(ArsipPresensi::count())->toBe(2)
         ->and(ArsipPresensi::where('tahun_ajaran_id', $this->tahunAktif->id)->count())->toBe(2)
         ->and(ArsipPresensi::where('is_alumni', true)->count())->toBe(2)
-        ->and(ArsipPresensi::where('siswa_nis', '25.090001')->where('status', 'hadir')->exists())->toBeTrue()
-        ->and(ArsipPresensi::where('siswa_nis', '25.090002')->where('status', 'sakit')->where('keterangan', 'Demam')->exists())->toBeTrue();
+        ->and(ArsipPresensi::where('siswa_nisn', '25.090001')->where('status', 'hadir')->exists())->toBeTrue()
+        ->and(ArsipPresensi::where('siswa_nisn', '25.090002')->where('status', 'sakit')->where('keterangan', 'Demam')->exists())->toBeTrue();
 
     // Data presensi harian dibersihkan
     expect(Absensi::count())->toBe(0);

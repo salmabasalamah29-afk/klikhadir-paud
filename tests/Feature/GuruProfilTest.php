@@ -47,7 +47,7 @@ test('siswa role cannot access guru profile page', function () {
     Siswa::create([
         'user_id' => $user->id,
         'kelas_id' => $kelas->id,
-        'nis' => '24.012505',
+        'nisn' => '24.012505',
         'nama' => 'Velove Azalia Putri',
     ]);
 

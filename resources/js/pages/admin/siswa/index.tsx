@@ -38,7 +38,6 @@ interface Kelas {
 
 interface Siswa {
     id: number;
-    nis: string;
     nisn?: string | null;
     nik?: string | null;
     nama: string;

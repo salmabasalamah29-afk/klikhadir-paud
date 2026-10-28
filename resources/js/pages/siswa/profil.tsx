@@ -8,7 +8,6 @@ import { dashboard as siswaDashboard } from '@/routes/siswa';
 
 interface Profil {
     id: number;
-    nis: string;
     nisn: string;
     nik?: string | null;
     nama: string;

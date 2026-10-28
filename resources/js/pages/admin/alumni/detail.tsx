@@ -24,7 +24,7 @@ export default function AlumniDetail({ tahunAjaran, kelas, records }: any) {
             {records.length === 0 ? <div className="py-4 text-center text-sm text-muted-foreground">Belum ada alumni.</div> : (
               <div className="overflow-x-auto">
                 <Table>
-                  <TableHeader><TableRow className="bg-muted/40 text-xs"><TableHead className="w-[40px] text-center py-2">No</TableHead><TableHead className="w-[90px] py-2">NIS</TableHead><TableHead className="py-2">Nama</TableHead><TableHead className="w-[150px] py-2">Kelas</TableHead></TableRow></TableHeader>
+                  <TableHeader><TableRow className="bg-muted/40 text-xs"><TableHead className="w-[40px] text-center py-2">No</TableHead><TableHead className="w-[90px] py-2">NISN</TableHead><TableHead className="py-2">Nama</TableHead><TableHead className="w-[150px] py-2">Kelas</TableHead></TableRow></TableHeader>
                   <TableBody>
                     {records.map((r: any, i: number) => (
                       <TableRow key={i} className="text-sm">
@@ -32,7 +32,7 @@ export default function AlumniDetail({ tahunAjaran, kelas, records }: any) {
                         <TableCell className="py-2">
                           <div className="flex items-center gap-1.5">
                             <Avatar className="size-6 shrink-0"><AvatarImage src={r.foto_url ?? undefined} /><AvatarFallback className="text-[9px]">{r.nama?.slice(0,2)?.toUpperCase()}</AvatarFallback></Avatar>
-                            <span className="font-mono text-xs">{r.nis}</span>
+                            <span className="font-mono text-xs">{r.nisn}</span>
                           </div>
                         </TableCell>
                         <TableCell className="font-medium py-2 text-xs">{r.nama}</TableCell>

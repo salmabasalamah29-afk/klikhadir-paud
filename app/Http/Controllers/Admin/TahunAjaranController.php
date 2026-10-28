@@ -19,8 +19,8 @@ class TahunAjaranController extends Controller
     {
         return Inertia::render('admin/tahunajaran/index', [
             'tahunAjarans' => TahunAjaran::withCount('arsipPresensis')
-                ->orderByRaw('CAST(tahun_awal AS INTEGER) ASC')
-                ->orderByRaw('CAST(tahun_akhir AS INTEGER) ASC')
+                ->orderByRaw('CAST(tahun_awal AS SIGNED) ASC')
+                ->orderByRaw('CAST(tahun_akhir AS SIGNED) ASC')
                 ->paginate(10),
             'isNaikKelasAvailable' => false,
         ]);
@@ -106,25 +106,9 @@ class TahunAjaranController extends Controller
                 return $tb <=> $ta;
             })->values();
 
-            $berhalangan = $sorted->first(fn ($it) => in_array($it->status, ['sakit', 'izin', 'dispensasi', 'alpha'], true));
-            $primary = $berhalangan ?? $sorted->first();
-            if (! $primary) {
-                return null;
-            }
-            if (empty($primary->bukti)) {
-                $latestBukti = $sorted->first(fn ($it) => ! empty($it->bukti));
-                if ($latestBukti) {
-                    $primary->setAttribute('bukti', $latestBukti->bukti);
-                }
-            }
-            if ($primary->status === 'alpha' && empty(trim((string) $primary->keterangan))) {
-                $withKet = $sorted->first(fn ($it) => $it->status === 'alpha' && ! empty(trim((string) $it->keterangan)));
-                if ($withKet) {
-                    $primary->setAttribute('keterangan', $withKet->keterangan);
-                }
-            }
+            $berhalangan = $sorted->first(fn ($it) => in_array($it->status, ['sakit', 'izin'], true));
 
-            return $primary;
+            return $berhalangan ?? $sorted->first();
         })->filter()->values();
 
         $raw = $merged;
@@ -133,7 +117,7 @@ class TahunAjaranController extends Controller
             $fotoUrl = $a->siswa?->foto_url;
             ArsipPresensi::firstOrCreate(
                 ['tahun_ajaran_id' => $active->id, 'siswa_id' => $a->siswa_id, 'tanggal' => $a->tanggal],
-                ['kelas_id' => $a->siswa?->kelas_id, 'guru_id' => $a->guru_id, 'jam_ke' => $a->jam_ke, 'status' => $a->status, 'keterangan' => $a->keterangan, 'bukti' => $a->bukti, 'is_alumni' => false, 'siswa_nis' => $a->siswa?->nis, 'siswa_nama' => $a->siswa?->nama, 'siswa_foto_url' => $fotoUrl]
+                ['kelas_id' => $a->siswa?->kelas_id, 'guru_id' => $a->guru_id, 'jam_ke' => $a->jam_ke, 'status' => $a->status, 'keterangan' => $a->keterangan, 'is_alumni' => false, 'siswa_nisn' => $a->siswa?->nisn, 'siswa_nama' => $a->siswa?->nama, 'siswa_foto_url' => $fotoUrl]
             );
         }
 
