@@ -33,7 +33,7 @@ export default function ChangePassword() {
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight">Ubah Sandi</h1>
                     <p className="text-muted-foreground">
-                        Ganti kata sandi akun Anda secara berkala untuk keamanan.
+                        Ganti kata sandi akun secara berkala untuk keamanan.
                     </p>
                 </div>
 
@@ -46,7 +46,7 @@ export default function ChangePassword() {
                                 <div>
                                     <CardTitle>Form Ubah Sandi</CardTitle>
                                     <CardDescription>
-                                        Masukkan kata sandi lama dan kata sandi baru Anda.
+                                        Masukkan kata sandi lama dan kata sandi baru.
                                     </CardDescription>
                                 </div>
                             </div>

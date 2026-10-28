@@ -1,10 +1,10 @@
 import { Head, router, usePage } from '@inertiajs/react';
-import { CheckCircle, Clock, FileWarning, Trash2 } from 'lucide-react';
+import { CheckCircle, Clock, FileWarning } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import DateInput, { formatTanggalLengkap } from '@/components/date-input';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import DateInput, { formatTanggalIndo } from '@/components/date-input';
 import guruPresensiDiri from '@/routes/guru/presensi-diri';
 import type { SharedData } from '@/types';
 
@@ -28,18 +28,36 @@ export default function GuruPresensiDiriIndex({
     today,
 }: Props) {
     const { auth } = usePage<SharedData>().props;
-    const [status, setStatus] = useState<'hadir' | 'sakit' | 'izin'>('hadir');
-    const [keterangan, setKeterangan] = useState('');
+    const [status, setStatus] = useState<'hadir' | 'sakit' | 'izin' | ''>(
+        todayPresensi?.status ?? '',
+    );
+    const [keterangan, setKeterangan] = useState(
+        todayPresensi?.keterangan ?? '',
+    );
     const [tanggal, setTanggal] = useState(today);
     const [submitting, setSubmitting] = useState(false);
+
+    const syncFormWithTanggal = (iso: string) => {
+        const presensi = guruPresensis.find((p) => p.tanggal === iso);
+
+        setStatus(presensi?.status ?? '');
+        setKeterangan(presensi?.keterangan ?? '');
+    };
+
+    const handleTanggalChange = (iso: string) => {
+        setTanggal(iso);
+        syncFormWithTanggal(iso);
+    };
 
     const handleSubmit = async () => {
         if (!tanggal || !status) {
             toast.error('Tanggal dan status wajib diisi.');
+
             return;
         }
 
         setSubmitting(true);
+
         try {
             await router.post(guruPresensiDiri.store.url(), {
                 tanggal,
@@ -61,18 +79,6 @@ export default function GuruPresensiDiriIndex({
         }
     };
 
-    const handleDelete = async (id: number) => {
-        if (!confirm('Yakin ingin menghapus presensi ini?')) return;
-
-        await router.delete(guruPresensiDiri.destroy.url({ presensi: id }), {
-            preserveScroll: true,
-            onSuccess: () => {
-                toast.success('Presensi diri berhasil direset.');
-                (router.reload as unknown as (opts: Record<string, unknown>) => void)({ preserveScroll: true });
-            },
-        });
-    };
-
     const statusLabel = (s: string) => {
         switch (s) {
             case 'hadir': return 'Hadir';
@@ -91,31 +97,27 @@ export default function GuruPresensiDiriIndex({
         }
     };
 
-    const formatHari = (iso: string) => {
-        try {
-            const d = new Date(iso + 'T00:00:00');
-            return d.toLocaleDateString('id-ID', { weekday: 'long', timeZone: 'Asia/Jakarta' });
-        } catch { return '-'; }
-    };
-
     const formatWaktu = (iso: string) => {
         try {
             const d = new Date(iso);
+
             return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' });
-        } catch { return '-'; }
+        } catch {
+            return '-';
+        }
     };
 
     return (
         <>
-            <Head title="Presensi Diri Guru" />
+            <Head title="Presensi Guru" />
             <div className="flex h-full w-full flex-1 flex-col gap-6 p-8">
                 <div className="flex items-start justify-between gap-4">
                     <div>
                         <h1 className="text-2xl font-bold tracking-tight">
-                            Presensi Diri Guru
+                            Presensi Guru
                         </h1>
                         <p className="text-muted-foreground">
-                            Catat kehadiran diri Anda setiap hari.
+                            Catat kehadiran mengajar setiap hari.
                         </p>
                     </div>
                 </div>
@@ -144,7 +146,7 @@ export default function GuruPresensiDiriIndex({
                                     <label className="text-sm font-medium">Tanggal</label>
                                     <DateInput
                                         value={tanggal}
-                                        onChange={(iso) => setTanggal(iso)}
+                                        onChange={handleTanggalChange}
                                     />
                                 </div>
 
@@ -212,25 +214,24 @@ export default function GuruPresensiDiriIndex({
                                     <FileWarning className="h-4 w-4 text-primary" /> Riwayat Presensi
                                 </h2>
                                 <p className="text-xs text-muted-foreground mt-0.5">
-                                    Riwayat presensi diri guru (terbaru di atas)
+                                    Riwayat presensi guru
                                 </p>
                             </div>
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left text-sm">
                                     <thead className="bg-muted/50 text-xs font-medium text-muted-foreground uppercase tracking-wider">
                                         <tr>
-                                            <th className="px-3 py-3 w-12 text-center">No</th>
-                                            <th className="px-6 py-4">Hari &amp; Tanggal</th>
-                                            <th className="px-6 py-4">Waktu Presensi</th>
-                                            <th className="px-6 py-4">Status</th>
+                                            <th className="w-12 px-3 py-3 text-center">No</th>
+                                            <th className="px-6 py-4 whitespace-nowrap">Hari &amp; Tanggal</th>
+                                            <th className="w-[160px] px-6 py-4 whitespace-nowrap">Waktu Presensi</th>
+                                            <th className="w-[140px] px-6 py-4">Status</th>
                                             <th className="px-6 py-4">Keterangan</th>
-                                            <th className="px-6 py-4 text-right w-16">Aksi</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-sidebar-border/70 dark:divide-sidebar-border">
                                         {guruPresensis.length === 0 ? (
                                             <tr>
-                                                <td colSpan={6} className="px-6 py-12 text-center text-muted-foreground">
+                                                <td colSpan={5} className="px-6 py-12 text-center text-muted-foreground">
                                                     <div className="flex flex-col items-center gap-2">
                                                         <Clock className="h-8 w-8 opacity-20" />
                                                         <p>Belum ada riwayat presensi diri.</p>
@@ -244,7 +245,7 @@ export default function GuruPresensiDiriIndex({
                                                         {index + 1}
                                                     </td>
                                                     <td className="px-6 py-4 font-medium text-foreground">
-                                                        {formatHari(p.tanggal)} ({formatTanggalIndo(p.tanggal)})
+                                                        {formatTanggalLengkap(p.tanggal)}
                                                     </td>
                                                     <td className="px-6 py-4 text-muted-foreground text-xs">
                                                         {formatWaktu(p.created_at)}
@@ -256,17 +257,6 @@ export default function GuruPresensiDiriIndex({
                                                     </td>
                                                     <td className="px-6 py-4 text-muted-foreground text-sm">
                                                         {p.keterangan || '-'}
-                                                    </td>
-                                                    <td className="px-6 py-4 text-right">
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            onClick={() => handleDelete(p.id)}
-                                                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                                                            title="Hapus"
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
                                                     </td>
                                                 </tr>
                                             ))

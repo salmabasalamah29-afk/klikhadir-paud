@@ -110,7 +110,7 @@ export function AppSidebar() {
                 icon: BookOpen,
             },
             {
-                title: 'Ekspor Presensi Siswa',
+                title: 'Ekspor Presensi',
                 href: exportAbsensi.index.url(),
                 icon: FileSpreadsheet,
             },
