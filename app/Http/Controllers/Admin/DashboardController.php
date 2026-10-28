@@ -88,9 +88,8 @@ class DashboardController extends Controller
                     'jam_ke' => $absensi->jam_ke,
                     'status' => $absensi->status,
                     'keterangan' => $absensi->keterangan,
-                    'bukti' => $absensi->bukti,
                     'siswa' => [
-                        'nis' => $absensi->siswa->nis,
+                        'nisn' => $absensi->siswa->nisn,
                         'nama' => $absensi->siswa->nama,
                     ],
                     'kelas' => $absensi->siswa->kelas ? $absensi->siswa->kelas->nama_kelas : '-',
@@ -131,6 +130,7 @@ class DashboardController extends Controller
             'gurus' => Guru::with(['kelas'])->orderBy('nama')->get()->map(function ($guru) {
                 return [
                     'id' => $guru->id,
+                    'user_id' => $guru->user_id,
                     'nama' => $guru->nama,
                     'kelasList' => $guru->kelas->map(function ($kelas) {
                         return [

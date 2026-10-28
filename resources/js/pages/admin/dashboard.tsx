@@ -23,6 +23,7 @@ import {
     CartesianGrid,
 } from 'recharts';
 import { toast } from 'sonner';
+import DateInput from '@/components/date-input';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -37,7 +38,6 @@ import {
     ChartTooltip,
     ChartTooltipContent,
 } from '@/components/ui/chart';
-import DateInput from '@/components/date-input';
 import { useAutoRefresh } from '@/hooks/use-auto-refresh';
 import { dashboard as adminDashboard } from '@/routes/admin';
 
@@ -56,6 +56,7 @@ interface Kelas {
 
 interface GuruExport {
     id: number;
+    user_id: number;
     nama: string;
     kelasList: KelasItem[];
 }
@@ -65,9 +66,8 @@ interface DetailedAttendance {
     jam_ke: string;
     status: string;
     keterangan: string | null;
-    bukti: string | null;
     siswa: {
-        nis: string;
+        nisn: string;
         nama: string;
     };
     kelas: string;
@@ -216,7 +216,7 @@ export default function AdminDashboard({
         if (allGuruSelected2) {
             setGuruIds2([]);
         } else {
-            setGuruIds2(gurus.map((g) => g.id.toString()));
+            setGuruIds2(gurus.map((g) => g.user_id.toString()));
         }
 
         setGuruOpen2(false);
@@ -260,7 +260,7 @@ export default function AdminDashboard({
 
         try {
             const response = await fetch(
-                `${window.location.origin}/guru/export/download?${params.toString()}`,
+                `${window.location.origin}/admin/export/download?${params.toString()}`,
                 {
                     headers: {
                         Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel, application/json, text/html, */*',
@@ -289,7 +289,7 @@ export default function AdminDashboard({
             const filenameMatch = disposition.match(/filename="?([^";\n]+)"?/);
             const filename = filenameMatch
                 ? filenameMatch[1]
-                : 'rekap-presensi-kelas.xlsx';
+                : 'rekap-presensi-siswa.xls';
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -344,7 +344,7 @@ export default function AdminDashboard({
 
         try {
             const response = await fetch(
-                `${window.location.origin}/guru/export/download?${params.toString()}`,
+                `${window.location.origin}/admin/export/download?${params.toString()}`,
                 {
                     headers: {
                         Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel, application/json, text/html, */*',
@@ -373,7 +373,7 @@ export default function AdminDashboard({
             const filenameMatch = disposition.match(/filename="?([^";\n]+)"?/);
             const filename = filenameMatch
                 ? filenameMatch[1]
-                : 'rekap-presensi-guru.xlsx';
+                : 'rekap-presensi-guru.xls';
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -701,11 +701,11 @@ export default function AdminDashboard({
                                                             <input
                                                                 type="checkbox"
                                                                 checked={guruIds2.includes(
-                                                                    g.id.toString(),
+                                                                    g.user_id.toString(),
                                                                 )}
                                                                 onChange={() =>
                                                                     toggleGuru2(
-                                                                        g.id.toString(),
+                                                                        g.user_id.toString(),
                                                                     )
                                                                 }
                                                                 className="size-4 shrink-0"

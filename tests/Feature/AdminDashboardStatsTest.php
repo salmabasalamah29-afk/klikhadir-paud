@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Guru;
 use App\Models\Kelas;
 use App\Models\Siswa;
 use App\Models\User;
@@ -13,12 +14,12 @@ beforeEach(function () {
     $this->kelasB = Kelas::create(['nama_kelas' => 'Kelompok B']);
 });
 
-function buatSiswaDiKelas(int $kelasId, string $nis, string $nama, bool $isAlumni = false): Siswa
+function buatSiswaDiKelas(int $kelasId, string $nisn, string $nama, bool $isAlumni = false): Siswa
 {
     return Siswa::create([
-        'user_id' => User::factory()->create(['role' => 'siswa', 'username' => $nis])->id,
+        'user_id' => User::factory()->create(['role' => 'siswa', 'username' => $nisn])->id,
         'kelas_id' => $kelasId,
-        'nis' => $nis,
+        'nisn' => $nisn,
         'nama' => $nama,
         'is_alumni' => $isAlumni,
     ]);
@@ -67,4 +68,19 @@ test('dashboard total siswa bertambah saat tambah data dan berkurang saat hapus 
     $this->get(route('admin.dashboard'))
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page->where('stats.total_siswa', 0));
+});
+
+test('dashboard menyediakan user id guru untuk kebutuhan ekspor', function () {
+    $guruUser = User::factory()->create(['role' => 'guru', 'name' => 'Guru Ekspor']);
+    $guru = Guru::create([
+        'user_id' => $guruUser->id,
+        'nama' => 'Guru Ekspor',
+    ]);
+
+    $this->get(route('admin.dashboard'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('gurus.0.id', $guru->id)
+            ->where('gurus.0.user_id', $guruUser->id)
+        );
 });

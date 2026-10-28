@@ -10,10 +10,18 @@ use App\Models\Siswa;
 use App\Models\TahunAjaran;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 
 class AttendanceExportController extends Controller
 {
+    private function formatTanggalIndonesia(?string $date): string
+    {
+        if (! $date) {
+            return '-';
+        }
+
+        return Carbon::parse($date)->locale('id')->translatedFormat('l, j F Y');
+    }
+
     private function validateActiveRange(?string $startDate, ?string $endDate): ?string
     {
         if ($startDate && ! TahunAjaran::isDateInActiveYear($startDate)) {
@@ -52,10 +60,7 @@ class AttendanceExportController extends Controller
                     return back()->with('error', 'Pilih Kelas di filter atas terlebih dahulu.');
                 }
                 $html = $this->generateLihatAbsensiExcel($kelasIds, $startDate, $endDate);
-                $kelasNama = Kelas::whereIn('id', $kelasIds)->first()?->full_nama_kelas ?? 'kelas';
-                $safeKelas = Str::slug($kelasNama, '-');
-                $safeKelas = Str::limit($safeKelas, 20, '');
-                $filename = 'rekap-presensi-'.$safeKelas.'-'.($startDate ?: 'semua').'.xls';
+                $filename = 'rekap-presensi-siswa.xls';
 
                 return $this->safeExcelResponse($html, $filename);
             }
@@ -66,10 +71,7 @@ class AttendanceExportController extends Controller
                 }
 
                 $html = $this->generateSimpleExcel($guru, $kelasIds, [], $startDate, $endDate);
-                $kelasNama = Kelas::whereIn('id', $kelasIds)->first()?->full_nama_kelas ?? 'kelas';
-                $safeKelas = Str::slug($kelasNama, '-');
-                $safeKelas = Str::limit($safeKelas, 20, '');
-                $filename = 'rekap-presensi-'.$safeKelas.'-'.($startDate ?: 'semua').'.xls';
+                $filename = 'rekap-presensi-siswa.xls';
 
                 return $this->safeExcelResponse($html, $filename);
             }
@@ -83,10 +85,7 @@ class AttendanceExportController extends Controller
 
         $html = $this->generateSimpleExcel($guru, $kelasIds, [], $startDate, $endDate);
 
-        $safeGuru = Str::slug($guru->nama, '-');
-        $safeGuru = Str::limit($safeGuru, 25, '');
-        $safeGuru = $safeGuru !== '' ? $safeGuru : 'guru';
-        $filename = 'rekap-presensi-'.$safeGuru.'.xls';
+        $filename = 'rekap-presensi-guru.xls';
 
         return $this->safeExcelResponse($html, $filename);
     }
@@ -155,7 +154,7 @@ class AttendanceExportController extends Controller
                 $html .= '<tr><td style="font-weight:bold;width:90px;white-space:nowrap">Kelas</td><td style="white-space:nowrap">: '.e($kls->full_nama_kelas).'</td></tr>';
             }
             if ($startDate || $endDate) {
-                $periode = ($startDate ?: '...').' s/d '.($endDate ?: '...');
+                $periode = ($startDate ? $this->formatTanggalIndonesia($startDate) : '...').' s/d '.($endDate ? $this->formatTanggalIndonesia($endDate) : '...');
                 $html .= '<tr><td style="font-weight:bold;white-space:nowrap">Periode</td><td style="white-space:nowrap">: '.e($periode).'</td></tr>';
             }
             $html .= '</table>';
@@ -166,12 +165,12 @@ class AttendanceExportController extends Controller
         if ($raw->isEmpty()) {
             $html .= '<table border="1" cellspacing="0" cellpadding="10" style="border-collapse:collapse;width:100%;border:1px solid #000;">';
             $html .= '<thead><tr>';
-            $html .= '<th style="width:38px">No</th>';
-            $html .= '<th style="width:58px">NIS</th>';
-            $html .= '<th style="min-width:260px">Nama</th>';
-            $html .= '<th style="width:125px">Kelas</th>';
-            $html .= '<th style="width:95px">Tanggal</th>';
-            $html .= '<th style="width:105px">Status</th>';
+            $html .= '<th style="width:38px">NO</th>';
+            $html .= '<th style="width:58px">NISN</th>';
+            $html .= '<th style="min-width:260px">NAMA SISWA</th>';
+            $html .= '<th style="width:190px">HARI &amp; TANGGAL</th>';
+            $html .= '<th style="width:105px">STATUS</th>';
+            $html .= '<th style="min-width:180px">KETERANGAN</th>';
             $html .= '</tr></thead><tbody>';
             $html .= '<tr><td colspan="6" style="text-align:center;padding:24px;">Tidak ada data untuk filter ini.</td></tr>';
             $totalSiswa = Siswa::whereIn('kelas_id', $kelasIds)->count();
@@ -197,86 +196,51 @@ class AttendanceExportController extends Controller
                 return $tb <=> $ta;
             })->values();
             $berhalangan = $sortedGroup->first(function ($it) {
-                return in_array($it->status, ['sakit', 'izin', 'dispensasi', 'alpha'], true);
+                return in_array($it->status, ['sakit', 'izin'], true);
             });
-            $primary = $berhalangan ?? $sortedGroup->first();
-            if (! $primary) {
-                return null;
-            }
-            if (empty($primary->bukti)) {
-                $latestBukti = $sortedGroup->first(function ($it) {
-                    return ! empty($it->bukti);
-                });
-                if ($latestBukti) {
-                    $primary->setAttribute('bukti', $latestBukti->bukti);
-                }
-            }
-            if ($primary->status === 'alpha' && empty(trim((string) $primary->keterangan))) {
-                $withKet = $sortedGroup->first(function ($it) {
-                    return $it->status === 'alpha' && ! empty(trim((string) $it->keterangan));
-                });
-                if ($withKet) {
-                    $primary->setAttribute('keterangan', $withKet->keterangan);
-                }
-            }
 
-            return $primary;
+            return $berhalangan ?? $sortedGroup->first();
         })->filter()->values();
         $sorted = $merged->sortBy(function ($a) use ($kelasPos) {
             $pos = $kelasPos[$a->siswa?->kelas_id ?? 0] ?? 9999;
-            $nis = $a->siswa?->nis;
-            $nisKey = $nis && is_numeric($nis) ? str_pad((string) $nis, 10, '0', STR_PAD_LEFT) : ($a->siswa?->nama ?? '');
+            $nisn = $a->siswa?->nisn;
+            $nisnKey = $nisn && is_numeric($nisn) ? str_pad((string) $nisn, 10, '0', STR_PAD_LEFT) : ($a->siswa?->nama ?? '');
 
-            return sprintf('%04d_%s_%s', $pos, $a->tanggal, $nisKey);
+            return sprintf('%04d_%s_%s', $pos, $a->tanggal, $nisnKey);
         })->values();
 
         $grouped = $sorted->groupBy('tanggal');
-        $hasKeteranganGlobal = $sorted->contains(function ($a) {
-            return $a->keterangan !== null && trim((string) $a->keterangan) !== '' && trim((string) $a->keterangan) !== '-';
-        });
-        $isFirstTable = true;
+        $colCount = 6;
 
         foreach ($grouped as $tanggal => $dateGroup) {
-            $formattedPeriode = Carbon::parse($tanggal)->format('d-m-Y');
+            $formattedPeriode = $this->formatTanggalIndonesia($tanggal);
             $kelasNamaTitle = $kelasList->first()?->full_nama_kelas ?? $dateGroup->first()?->siswa?->kelas?->full_nama_kelas ?? '-';
-            $hasKeteranganThisDate = $dateGroup->contains(function ($a) {
-                return $a->keterangan !== null && trim((string) $a->keterangan) !== '' && trim((string) $a->keterangan) !== '-';
-            });
-            $showKeteranganThisTable = $hasKeteranganGlobal;
-            $colCount = $showKeteranganThisTable ? 7 : 6;
 
             $html .= '<table border="1" cellspacing="0" cellpadding="10" style="border-collapse:collapse;width:100%;border:1px solid #000;">';
             $html .= '<tr class="title-row"><td colspan="'.$colCount.'" style="font-size:12px">'.e($kelasNamaTitle).' &nbsp;&bull;&nbsp; '.e($formattedPeriode).'</td></tr>';
             $html .= '<thead><tr>';
-            $html .= '<th style="width:38px">No</th>';
-            $html .= '<th style="width:58px">NIS</th>';
-            $html .= '<th style="min-width:260px">Nama</th>';
-            $html .= '<th style="width:125px">Kelas</th>';
-            $html .= '<th style="width:95px">Tanggal</th>';
-            $html .= '<th style="width:105px">Status</th>';
-            if ($showKeteranganThisTable) {
-                $html .= '<th style="min-width:180px">Keterangan</th>';
-            }
+            $html .= '<th style="width:38px">NO</th>';
+            $html .= '<th style="width:58px">NISN</th>';
+            $html .= '<th style="min-width:260px">NAMA SISWA</th>';
+            $html .= '<th style="width:190px">HARI &amp; TANGGAL</th>';
+            $html .= '<th style="width:105px">STATUS</th>';
+            $html .= '<th style="min-width:180px">KETERANGAN</th>';
             $html .= '</tr></thead><tbody>';
 
             $no = 1;
             foreach ($dateGroup as $abs) {
-                $nis = $abs->siswa?->nis ?? '-';
+                $nisn = $abs->siswa?->nisn ?? '-';
                 $nama = $abs->siswa?->nama ?? '-';
-                $kelasNama = $abs->siswa?->kelas?->full_nama_kelas ?? $kelasNamaTitle;
-                $tgl = $abs->tanggal ? Carbon::parse($abs->tanggal)->format('d-m-Y') : '-';
+                $tgl = $abs->tanggal ? $this->formatTanggalIndonesia($abs->tanggal) : '-';
                 $status = ucfirst($abs->status ?? '-');
+                $ket = ($abs->keterangan && trim((string) $abs->keterangan) !== '') ? $abs->keterangan : '-';
                 $html .= '<tr>';
                 $html .= '<td style="text-align:center;">'.$no++.'</td>';
-                $html .= '<td style="mso-number-format:\@;text-align:center;">'.e($nis).'</td>';
+                $html .= '<td style="mso-number-format:\@;text-align:center;">'.e($nisn).'</td>';
                 $html .= '<td style="white-space:normal;word-wrap:break-word;min-width:260px">'.e($nama).'</td>';
-                $html .= '<td style="text-align:center;white-space:nowrap;">'.e($kelasNama).'</td>';
-                $html .= '<td style="text-align:center;mso-number-format:\@;white-space:nowrap">'.e($tgl).'</td>';
+                $html .= '<td style="text-align:center;white-space:nowrap">'.e($tgl).'</td>';
                 $html .= '<td style="text-align:center;white-space:nowrap">'.e($status).'</td>';
-                if ($showKeteranganThisTable) {
-                    $ket = ($abs->keterangan && trim((string) $abs->keterangan) !== '') ? $abs->keterangan : '-';
-                    $html .= '<td style="white-space:normal;word-wrap:break-word">'.e($ket).'</td>';
-                }
+                $html .= '<td style="white-space:normal;word-wrap:break-word">'.e($ket).'</td>';
                 $html .= '</tr>';
             }
 
@@ -289,8 +253,6 @@ class AttendanceExportController extends Controller
 
             $html .= '<table style="border:none;width:100%"><tr><td style="border:none;height:35px;background:transparent">&nbsp;</td></tr></table>';
             $html .= '<div style="height:27px;line-height:27px;border:none;background:transparent;mso-height-source:userset">&nbsp;</div>';
-
-            $isFirstTable = false;
         }
 
         $html .= '</body></html>';
@@ -318,9 +280,9 @@ class AttendanceExportController extends Controller
             $html .= '</head><body>';
             $html .= '<table class="header-meta"><tr><td style="font-weight:bold;white-space:nowrap;width:90px">Nama Guru</td><td style="white-space:nowrap">: '.e($guru->nama).'</td></tr></table>';
             $html .= '<div style="height:24px"></div>';
-            $html .= '<table><thead><tr><th style="width:38px">No</th><th style="width:58px">NIS</th><th style="min-width:260px">Nama</th><th style="width:125px">Kelas</th><th style="width:95px">Tanggal</th><th style="width:110px">Jam Pembelajaran</th><th style="width:105px">Status Kehadiran</th></tr></thead><tbody>';
-            $html .= '<tr><td colspan="7" style="text-align:center;padding:24px;">Tidak ada data untuk filter ini. Pastikan kelas yang dipilih termasuk yang Anda ampu.</td></tr>';
-            $html .= '<tr><td colspan="7" style="font-weight:bold;">Total: 0 siswa</td></tr>';
+            $html .= '<table><thead><tr><th style="width:38px">NO</th><th style="width:58px">NISN</th><th style="min-width:260px">NAMA SISWA</th><th style="width:190px">HARI &amp; TANGGAL</th><th style="width:105px">STATUS</th><th style="min-width:180px">KETERANGAN</th></tr></thead><tbody>';
+            $html .= '<tr><td colspan="6" style="text-align:center;padding:24px;">Tidak ada data untuk filter ini. Pastikan kelas yang dipilih termasuk yang Anda ampu.</td></tr>';
+            $html .= '<tr><td colspan="6" style="font-weight:bold;">Total: 0 siswa</td></tr>';
             $html .= '</tbody></table></body></html>';
 
             return $html;
@@ -368,7 +330,7 @@ class AttendanceExportController extends Controller
         $html .= '<table class="header-meta">';
         $html .= '<tr><td style="font-weight:bold;white-space:nowrap;width:90px">Nama Guru</td><td style="white-space:nowrap">: '.e($guru->nama).'</td></tr>';
         if ($startDate || $endDate) {
-            $periode = ($startDate ?: '...').' s/d '.($endDate ?: '...');
+            $periode = ($startDate ? $this->formatTanggalIndonesia($startDate) : '...').' s/d '.($endDate ? $this->formatTanggalIndonesia($endDate) : '...');
             $html .= '<tr><td style="font-weight:bold;white-space:nowrap">Periode</td><td style="white-space:nowrap">: '.e($periode).'</td></tr>';
         }
         $html .= '</table>';
@@ -377,41 +339,33 @@ class AttendanceExportController extends Controller
 
         $html .= '<table border="1" cellspacing="0" cellpadding="10" style="border-collapse:collapse;width:100%;border:1px solid #000;">';
         $html .= '<thead><tr>';
-        $html .= '<th style="width:38px">No</th>';
-        $html .= '<th style="width:58px">NIS</th>';
-        $html .= '<th style="min-width:260px">Nama</th>';
-        $html .= '<th style="width:125px">Kelas</th>';
-        $html .= '<th style="width:95px">Tanggal</th>';
-        $html .= '<th style="width:110px">Jam Pembelajaran</th>';
-        $html .= '<th style="width:105px">Status Kehadiran</th>';
+        $html .= '<th style="width:38px">NO</th>';
+        $html .= '<th style="width:58px">NISN</th>';
+        $html .= '<th style="min-width:260px">NAMA SISWA</th>';
+        $html .= '<th style="width:190px">HARI &amp; TANGGAL</th>';
+        $html .= '<th style="width:105px">STATUS</th>';
+        $html .= '<th style="min-width:180px">KETERANGAN</th>';
         $html .= '</tr></thead><tbody>';
 
         if ($absensis->isEmpty()) {
-            $html .= '<tr><td colspan="7" style="text-align:center; padding:24px; color:#000;">Tidak ada data untuk filter ini.</td></tr>';
+            $html .= '<tr><td colspan="6" style="text-align:center; padding:24px; color:#000;">Tidak ada data untuk filter ini.</td></tr>';
         } else {
             $no = 1;
             foreach ($absensis as $absensi) {
                 $siswa = $absensi->siswa;
-                $nis = $siswa?->nis ?? '-';
+                $nisn = $siswa?->nisn ?? '-';
                 $nama = $siswa?->nama ?? '-';
-                $kelasNama = $siswa?->kelas?->full_nama_kelas ?? '-';
-                $tgl = $absensi->tanggal ? Carbon::parse($absensi->tanggal)->format('d-m-Y') : '-';
-                $jam = $absensi->jam_ke ?? '-';
-                if ($absensi->waktu_mulai && $absensi->waktu_selesai) {
-                    $jam .= ' ('.substr($absensi->waktu_mulai, 0, 5).'-'.substr($absensi->waktu_selesai, 0, 5).')';
-                } elseif ($absensi->waktu_mulai) {
-                    $jam .= ' ('.substr($absensi->waktu_mulai, 0, 5).')';
-                }
+                $tgl = $absensi->tanggal ? $this->formatTanggalIndonesia($absensi->tanggal) : '-';
                 $status = ucfirst($absensi->status ?? '-');
+                $ket = ($absensi->keterangan && trim((string) $absensi->keterangan) !== '') ? $absensi->keterangan : '-';
 
                 $html .= '<tr>';
                 $html .= '<td class="text-center">'.$no++.'</td>';
-                $html .= '<td style="mso-number-format:\@;text-align:center;">'.e($nis).'</td>';
+                $html .= '<td style="mso-number-format:\@;text-align:center;">'.e($nisn).'</td>';
                 $html .= '<td style="white-space:normal;word-wrap:break-word;min-width:260px">'.e($nama).'</td>';
-                $html .= '<td style="text-align:center;white-space:nowrap;">'.e($kelasNama).'</td>';
                 $html .= '<td class="text-center" style="mso-number-format:\@;white-space:nowrap">'.e($tgl).'</td>';
-                $html .= '<td class="text-center" style="white-space:nowrap;">'.e($jam).'</td>';
                 $html .= '<td class="text-center" style="white-space:nowrap">'.e($status).'</td>';
+                $html .= '<td style="white-space:normal;word-wrap:break-word">'.e($ket).'</td>';
                 $html .= '</tr>';
             }
         }
@@ -425,7 +379,7 @@ class AttendanceExportController extends Controller
         } else {
             $totalSiswa = Siswa::whereIn('kelas_id', $filteredKelasIds)->count();
         }
-        $html .= '<tr><td colspan="7" style="font-weight:bold; text-align:left; border: 1px solid #000; padding:10px 12px;background:#F8FAFF">Total: '.$totalSiswa.' siswa</td></tr>';
+        $html .= '<tr><td colspan="6" style="font-weight:bold; text-align:left; border: 1px solid #000; padding:10px 12px;background:#F8FAFF">Total: '.$totalSiswa.' siswa</td></tr>';
 
         $html .= '</tbody></table>';
         $html .= '</body></html>';

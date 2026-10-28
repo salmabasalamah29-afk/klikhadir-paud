@@ -124,7 +124,7 @@ export default function GuruExportAbsensi({
 
             const disposition = response.headers.get('Content-Disposition') || '';
             const filenameMatch = disposition.match(/filename="?([^";\n]+)"?/);
-            const filename = filenameMatch ? filenameMatch[1] : 'rekap-presensi-kelas.xls';
+            const filename = filenameMatch ? filenameMatch[1] : 'rekap-presensi-siswa.xls';
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;

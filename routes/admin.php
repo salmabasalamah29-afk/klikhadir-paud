@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\SiswaController;
 use App\Http\Controllers\Admin\StatistikController;
 use App\Http\Controllers\Admin\TahunAjaranController;
 use App\Http\Controllers\Export\AttendanceExportController;
+use App\Http\Controllers\Guru\ExportPageController;
 use App\Http\Controllers\PasswordResetController;
 use Illuminate\Support\Facades\Route;
 
@@ -62,6 +63,7 @@ Route::middleware(['web', 'auth', 'role:admin', 'check.password.status'])->prefi
     Route::get('ubah-sandi', [PasswordResetController::class, 'showChange'])->name('password.change.show');
     Route::post('ubah-sandi', [PasswordResetController::class, 'updateChange'])->name('password.change');
 
+    Route::get('export/download', [ExportPageController::class, 'export'])->name('export.download');
     Route::get('export-absensi', [AttendanceExportController::class, 'export'])->name('export-absensi');
 
     // CSV Import: template & import untuk 10 platform
@@ -72,7 +74,7 @@ Route::middleware(['web', 'auth', 'role:admin', 'check.password.status'])->prefi
             'tahun-ajaran' => ['headers' => ['tahun_awal', 'tahun_akhir']],
             'kelas' => ['headers' => ['nama_kelas']],
             'guru' => ['headers' => ['nip', 'nama', 'jenis_kelamin', 'kelas']],
-            'siswa' => ['headers' => ['nis', 'nama', 'jenis_kelamin', 'kelas']],
+            'siswa' => ['headers' => ['nisn', 'nama', 'jenis_kelamin', 'kelas']],
             'admin' => ['headers' => ['name', 'email', 'password']],
         ];
 
